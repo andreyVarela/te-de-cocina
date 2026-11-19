@@ -41,6 +41,8 @@ function crearMundo() {
         const [fr, fc] = a1(r);
         return new Rango(this, fr, fc, 1, 1);
       }
+      // Como Sheets: pedir filas más allá del máximo de la hoja lanza «out of bounds».
+      if (r + nr - 1 > this.getMaxRows()) throw new Error(`Rango fuera de la hoja ${this.nombre}: fila ${r + nr - 1} > ${this.getMaxRows()}`);
       return new Rango(this, r, c, nr, nc);
     }
     appendRow(fila) {

@@ -9,7 +9,7 @@
                          { ok:false, codigo:'sin_conexion', mensaje, datos:{ detalle } }   (código solo del cliente)
    La UI decide SIEMPRE por `codigo`, nunca por el texto.
 
-   ==== SUPUESTO DE PROTOCOLO con el Apps Script (por reconciliar con FORGE/ATLAS) ====
+   ==== PROTOCOLO con el Apps Script (contrato §6) ====
    · URL: <meta name="tdc:api-url" content="{{API_URL}}"> (el build la toma de evento.json → api_url).
    · Lista:   GET  {API_URL}?accion=ver&token=<token>        (token para calcular `mio`; si se prefiere que
               el token no viaje en la URL, cambiar a POST {accion:'ver', token} aquí y en el script).

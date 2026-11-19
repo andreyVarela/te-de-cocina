@@ -1,6 +1,6 @@
 /* Té de cocina de Andrey · una sola hoja de washi: tinta sumi, papel crudo y un sello bermellón.
    Tema único (claro) a propósito: el modo oscuro está fuera del MVP (docs/producto/alcance.md).
-   Paleta y tipografías aprobadas por IRIS en invitacion-v1.html. Solo tokens: los hex viven aquí arriba.
+   Paleta y tipografías de la invitación aprobada. Solo tokens: los hex viven aquí arriba.
    Compatibilidad: iOS 12 / Android 7. Sin flex-gap, sin aspect-ratio, sin inset; clamp() con respaldo. */
 
 :root {

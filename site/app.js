@@ -1,7 +1,7 @@
 /* app.js · vista del invitado (index.html). Requiere api.js antes (único acceso a datos: TDC.api).
 
-   ===================== SUPUESTO DE INTERFAZ CON EL BUILD (por reconciliar con FORGE) =====================
-   El build deja la lista y la fecha escritas en el HTML (se leen sin JS). Supuesto de AURORA: sustitución
+   ===================== INTERFAZ CON EL BUILD (scripts/build.mjs) =====================
+   El build deja la lista y la fecha escritas en el HTML (se leen sin JS). Sustitución
    de marcadores en texto, sin motor de plantillas.
      · {{x}}   → valor ESCAPADO para HTML (& < > " ').      · {{{X}}} → HTML crudo generado por el propio build.
    site/index.html  (→ dist/index.html)

@@ -1,9 +1,9 @@
 # Contrato técnico · Apartar regalos (módulo `regalos`)
 
-Estado: aceptado (ATLAS, 2026-11-19; backend Sheet + Apps Script según `docs/adr/0001-backend-y-hosting.md`).
-Alcance y reglas de negocio en `docs/producto/alcance.md` (manda si chocan). Lo implementan FORGE
-(Apps Script, build, Action) y AURORA (HTML/CSS/JS). Nada de esto es código: es el contrato que
-ambos cumplen y que NEXUS verifica.
+Estado: aceptado (2026-11-19; backend Sheet + Apps Script según `docs/adr/0001-backend-y-hosting.md`).
+Alcance y reglas de negocio en `docs/producto/alcance.md` (manda si chocan). Lo implementan el backend
+(Apps Script, build, Action) y la página (HTML/CSS/JS). Nada de esto es código: es el contrato que
+ambos cumplen y que se verifica antes de publicar.
 
 ## 1. Glosario (un nombre por concepto)
 
@@ -22,15 +22,15 @@ ambos cumplen y que NEXUS verifica.
 
 ```
 evento.json                 ← ÚNICO archivo que edita Andrey: fecha/hora, lugar, api_url
-catalogo.json               ← catálogo (Andrey/PATRON lo editan); gana `id` estable y `aviso`
+catalogo.json               ← catálogo (lo edita Andrey); gana `id` estable y `aviso`
 scripts/build.mjs           ← Node ≥ 18 sin dependencias: catalogo.json + evento.json → dist/ y apps-script/Code.gs
-site/                       ← frontend (AURORA): index.html (+ partes/), app.js, api.js, estilos.css, img/
+site/                       ← frontend: index.html (+ partes/), app.js, api.js, estilos.css, img/
 dist/                       ← salida publicada por Pages (lo genera la Action; no se versiona)
 apps-script/Logica.js       ← funciones puras (validar, decidir, proyectar); sin APIs de Google; se prueban en Node
 apps-script/Servidor.js     ← doGet/doPost, LockService, CacheService, SpreadsheetApp, setup()
 apps-script/Code.gs         ← GENERADO por el build: Logica + Servidor + catálogo embebido; es lo único que Andrey pega
 tests/logica.test.mjs       ← node --test sobre Logica.js
-tests/contrato.sh           ← curl contra la web app real (NEXUS)
+tests/contrato.sh           ← curl contra la web app real
 .github/workflows/pages.yml ← build + deploy a Pages en push a main
 ```
 No existe `despertar.yml` (Apps Script no se pausa) ni `admin.html` ni secreto de admin.
@@ -171,7 +171,7 @@ Respuesta con `ContentService.createTextOutput(JSON.stringify(...)).setMimeType(
 Script no permite fijar el status HTTP, así que **todo lo de negocio viaja como 200 + `codigo`**.
 Cualquier otra cosa (red caída, `fetch` rechazado, HTML de error de Google, JSON sin `ok`) es
 error de transporte: la UI muestra «No se guardó. Revisa tu conexión» con Reintentar y conserva lo
-escrito. Nunca «Listo» sin `ok: true`. Los `mensaje` son sugerencia (copy final AURORA con IRIS);
+escrito. Nunca «Listo» sin `ok: true`. Los `mensaje` son sugerencia (el copy final vive en site/app.js);
 `codigo` y `datos` son contrato.
 
 ### Transporte
@@ -228,7 +228,7 @@ Idempotente: si no hay nada activo, `liberado: false` con el estado real (cubre 
 algo que alguien tenía abierto»). Errores: `articulo_invalido`, `token_invalido`,
 `demasiadas_solicitudes`.
 
-## 7. Reglas de frontend que son contrato (AURORA, ya avisada)
+## 7. Reglas de frontend que son contrato (página)
 
 - Vanilla HTML/CSS/JS, sin bundler ni npm. **Un solo módulo de red, `site/api.js`**, que exporta
   `TDC.api.verLista()`, `TDC.api.apartar(id, nombre, parecido)` y `TDC.api.soltar(id)` (global por iOS 12; el token de dispositivo lo maneja api.js por dentro)
@@ -246,7 +246,7 @@ algo que alguien tenía abierto»). Errores: `articulo_invalido`, `token_invalid
 - Imágenes: `loading="lazy"`, `referrerpolicy="no-referrer"`, recuadro de tamaño fijo con el nombre
   en texto si falla; copia optimizada en `site/img/` si una tienda bloquea el hotlink.
 
-## 8. Build, seed y despliegue (FORGE)
+## 8. Build, seed y despliegue
 
 - `scripts/build.mjs`: valida `catalogo.json` (ids únicos y con formato, `aviso` opcional,
   `precio_crc` entero), lee `evento.json`, renderiza lista y fecha en `dist/index.html` desde
@@ -273,7 +273,7 @@ algo que alguien tenía abierto»). Errores: `articulo_invalido`, `token_invalid
 
 ## 9. Pruebas de contrato
 
-**FORGE, local, sin Google:** `tests/logica.test.mjs` con `node --test` carga `Logica.js` (sin
+**Local, sin Google:** `tests/logica.test.mjs` con `node --test` carga `Logica.js` (sin
 APIs de Google) y cubre, mínimo:
 1. Doble `decidirApartar` mismo hash/artículo/tipo → segundo `repetido: true`, sin fila nueva.
 2. Dos hashes, mismo artículo, `apartado` → segundo `ya_apartado` con `datos.por` = pila del primero.
@@ -289,14 +289,14 @@ APIs de Google) y cubre, mínimo:
    con `id_articulo` desconocido se ignoran.
 9. Artículo `activo = no` → `articulo_invalido`.
 
-**NEXUS, contra la web app real** (`tests/contrato.sh` con `curl`, después de que Andrey
+**Contra la web app real** (`tests/contrato.sh` con `curl`, después de que Andrey
 despliegue): `GET ?accion=ver` → 200 tras redirect, llaves exactas de §6; `POST apartar` con
 token de prueba y artículo real → `ok`, luego el mismo `POST` → `repetido: true`, luego `soltar`
 → `liberado: true`, luego `soltar` → `liberado: false`; `POST` con `Content-Type: text/plain`
 desde un origen distinto (navegador) no dispara preflight. Deja la hoja limpia (filas de prueba
-con nombre «Prueba NEXUS» que Andrey puede borrar; el script no las distingue).
+con nombre «Prueba contrato» que Andrey puede borrar; el script no las distingue).
 
-## 10. Operación para Andrey (resumen; el detalle va en el README que escribe FORGE)
+## 10. Operación para Andrey (resumen; el detalle va en el README )
 
 - **Cambiar fecha/hora:** editar `empieza_en` en `evento.json` en GitHub → merge → 1 min.
 - **Ver quién apartó qué:** abrir la hoja, pestaña `resumen` (cabecera «Apartados: X de 36 ·
@@ -318,7 +318,7 @@ con nombre «Prueba NEXUS» que Andrey puede borrar; el script no las distingue)
 Cerrar la lista con una celda `cerrada = si` en una pestaña `config`; Cloudflare Turnstile si hay
 abuso; apartar por unidad; copia local de todas las fotos; actualización sin recargar.
 
-→ FORGE: `apps-script/{Logica.js,Servidor.js}`, `scripts/build.mjs` (incluye `Code.gs`),
+→ Backend: `apps-script/{Logica.js,Servidor.js}`, `scripts/build.mjs` (incluye `Code.gs`),
 `tests/logica.test.mjs`, `tests/contrato.sh`, `pages.yml`, README de operación (§3, §5, §6, §8-§10).
-→ AURORA: `site/` según §7 (`api.js` con el sobre de §6) con el diseño aprobado y H1-H5.
-→ NEXUS: §9 contra la web app real y el checklist del ADR antes de mandar el link.
+→ Página: `site/` según §7 (`api.js` con el sobre de §6) con el diseño aprobado y H1-H5.
+→ Antes de publicar: §9 contra la web app real y el checklist del ADR antes de mandar el link.

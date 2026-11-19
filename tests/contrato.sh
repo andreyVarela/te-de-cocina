@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Prueba de contrato contra la web app REAL de Apps Script (contrato §9, la corre NEXUS después de
-# que Andrey despliegue). Escribe filas de prueba con nombre «Prueba NEXUS» y las deja liberadas;
+# Prueba de contrato contra la web app REAL de Apps Script (contrato §9, se corre después de
+# que Andrey despliegue). Escribe filas de prueba con nombre «Prueba contrato» y las deja liberadas;
 # Andrey puede borrarlas de la pestaña «registros» cuando quiera.
 #
 # Uso:  bash tests/contrato.sh                      (toma api_url de evento.json)
@@ -18,7 +18,7 @@ if [[ -z "$API" || "$API" == *XXXX* ]]; then
   exit 2
 fi
 
-NOMBRE="Prueba NEXUS"
+NOMBRE="Prueba contrato"
 T1="$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))')"
 T2="$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))')"
 T3="$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))')"
@@ -87,7 +87,7 @@ check "token mal formado: token_invalido" \
   "$(post "{\"accion\":\"apartar\",\"articulo_id\":\"$ART\",\"nombre\":\"$NOMBRE\",\"tipo\":\"apartado\",\"token\":\"abc\"}")" \
   "r.codigo === 'token_invalido'"
 check "artículo inexistente: articulo_invalido" \
-  "$(post "{\"accion\":\"soltar\",\"articulo_id\":\"no-existe-nexus\",\"token\":\"$T1\"}")" "r.codigo === 'articulo_invalido'"
+  "$(post "{\"accion\":\"soltar\",\"articulo_id\":\"no-existe-prueba\",\"token\":\"$T1\"}")" "r.codigo === 'articulo_invalido'"
 check "tipo raro: tipo_invalido" \
   "$(post "{\"accion\":\"apartar\",\"articulo_id\":\"$ART\",\"nombre\":\"$NOMBRE\",\"tipo\":\"regalo\",\"token\":\"$T1\"}")" "r.codigo === 'tipo_invalido'"
 check "cuerpo no JSON: entrada_invalida" "$(post 'hola')" "r.codigo === 'entrada_invalida'"

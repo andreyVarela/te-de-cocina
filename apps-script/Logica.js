@@ -21,7 +21,7 @@ var RE_TOKEN = /^[0-9a-f]{64}$/;
 var RE_CONTROL = /[\u0000-\u001F\u007F]/;
 var RE_LETRA = /\p{L}/u;
 
-// Mensajes sugeridos (copy final: AURORA con IRIS). `codigo` y `datos` son contrato; esto no.
+// Mensajes sugeridos (el copy final vive en site/app.js). `codigo` y `datos` son contrato; esto no.
 var MENSAJES = Object.freeze({
   accion_invalida: 'Esa acción no existe. Recarga la página e intenta de nuevo.',
   entrada_invalida: 'Faltan datos en la solicitud. Recarga la página e intenta de nuevo.',

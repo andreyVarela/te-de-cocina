@@ -203,7 +203,7 @@ function renderizar(plantilla, datos, html, archivo) {
 
 function leerParte(nombre) {
   const ruta = join(SITE, 'partes', nombre);
-  if (!existsSync(ruta)) throw new ErrorBuild(`  - Falta site/partes/${nombre} (lo escribe AURORA).`);
+  if (!existsSync(ruta)) throw new ErrorBuild(`  - Falta site/partes/${nombre}.`);
   return readFileSync(ruta, 'utf8');
 }
 
@@ -259,7 +259,7 @@ function htmlCategorias(articulos) {
 
 function leerFuente(nombre) {
   const ruta = join(APPS_SCRIPT, nombre);
-  if (!existsSync(ruta)) throw new ErrorBuild(`  - Falta apps-script/${nombre} (lo mantiene FORGE). Sin él no se puede generar Code.gs.`);
+  if (!existsSync(ruta)) throw new ErrorBuild(`  - Falta apps-script/${nombre}. Sin él no se puede generar Code.gs.`);
   return readFileSync(ruta, 'utf8');
 }
 
@@ -317,13 +317,13 @@ function archivosDe(dir) {
 
 function construirSitio(catalogo, evento, apiUrl) {
   if (!existsSync(SITE) || !statSync(SITE).isDirectory()) {
-    throw new ErrorBuild('  - No existe la carpeta site/ (el frontend que escribe AURORA). '
+    throw new ErrorBuild('  - No existe la carpeta site/ (el frontend). '
       + 'Sin ella no hay página que publicar. Para generar solo Code.gs: node scripts/build.mjs --solo-code');
   }
   const paginaPublica = ['index.html', 'plantilla.html'].find((f) => existsSync(join(SITE, f)));
   if (!paginaPublica) throw new ErrorBuild('  - Falta site/index.html (o site/plantilla.html): la página pública.');
   for (const f of SITE_OBLIGATORIOS) {
-    if (!existsSync(join(SITE, f))) fallo(`Falta site/${f} (lo escribe AURORA).`);
+    if (!existsSync(join(SITE, f))) fallo(`Falta site/${f}.`);
   }
   cortarSiHayErrores();
 

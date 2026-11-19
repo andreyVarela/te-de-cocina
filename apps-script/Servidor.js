@@ -142,8 +142,9 @@ function soltar_(cuerpo) {
         var id = String(actual[tabla.indice.id_articulo]).trim().toLowerCase();
         var h = String(actual[tabla.indice.hash_token]).trim().toLowerCase();
         if (id !== entrada.articulo || h !== entrada.hash) throw new Error('La fila ' + n + ' cambió durante soltar');
-        tabla.hoja.getRange(n, tabla.indice.estado + 1).setValue('liberado');
+        // Primero la fecha: si falla la segunda escritura, la fila sigue activa y reintentar la repara.
         tabla.hoja.getRange(n, tabla.indice.liberado + 1).setValue(ahora);
+        tabla.hoja.getRange(n, tabla.indice.estado + 1).setValue('liberado');
       });
       SpreadsheetApp.flush();
       invalidarVer_();
@@ -180,7 +181,12 @@ function aplicarFrecuencia_(hash) {
 }
 
 function invalidarVer_() {
-  CacheService.getScriptCache().put('ver:gen', String(Date.now()), 21600);
+  // La escritura ya quedó en la hoja: un fallo de caché no debe convertirla en error_interno.
+  try {
+    CacheService.getScriptCache().put('ver:gen', String(Date.now()), 21600);
+  } catch (e) {
+    console.warn('No se pudo invalidar la caché de ver: ' + e);
+  }
 }
 
 function sha256Hex_(texto) {
@@ -415,6 +421,9 @@ function prepararResumen_(libro, articulos, colReg) {
   hoja.getRange(fBitacora + 1, 1).setFormula(F('=QUERY(registros!A:' + ultimaCol + ';"select ' + [q('id_articulo'), q('tipo'),
     q('nombre'), q('creado'), q('origen')].join(', ') + ' where ' + q('id_articulo') + ' is not null and (' + q('estado')
     + ' = \'activo\' or ' + q('estado') + ' is null) order by ' + q('creado') + ' desc";1)'));
+  // Una hoja nueva trae 1000 filas: hay que crecerla antes de formatear la bitácora completa.
+  var hasta = fBitacora + 1 + LIMITES.MAX_FILAS_REGISTROS;
+  if (hoja.getMaxRows() < hasta) hoja.insertRowsAfter(hoja.getMaxRows(), hasta - hoja.getMaxRows());
   hoja.getRange(fBitacora + 2, 4, LIMITES.MAX_FILAS_REGISTROS, 1).setNumberFormat('d/m/yyyy h:mm am/pm');
 
   // Duplicado: texto + rojo (el color es solo refuerzo).

@@ -2,7 +2,7 @@
 // GENERADO por scripts/build.mjs: no editar a mano. Se edita apps-script/Logica.js,
 // apps-script/Servidor.js o catalogo.json y se corre: node scripts/build.mjs
 // Cómo se usa: copiar TODO este archivo y pegarlo en Extensiones → Apps Script → Código.gs (README).
-// Artículos: 36. Huella: 4aba371caef4
+// Artículos: 36. Huella: 468ba024e33b
 
 // ===================================================================== catálogo (desde catalogo.json)
 const CATALOGO = [
@@ -67,7 +67,7 @@ var RE_TOKEN = /^[0-9a-f]{64}$/;
 var RE_CONTROL = /[\u0000-\u001F\u007F]/;
 var RE_LETRA = /\p{L}/u;
 
-// Mensajes sugeridos (copy final: AURORA con IRIS). `codigo` y `datos` son contrato; esto no.
+// Mensajes sugeridos (el copy final vive en site/app.js). `codigo` y `datos` son contrato; esto no.
 var MENSAJES = Object.freeze({
   accion_invalida: 'Esa acción no existe. Recarga la página e intenta de nuevo.',
   entrada_invalida: 'Faltan datos en la solicitud. Recarga la página e intenta de nuevo.',
@@ -575,8 +575,9 @@ function soltar_(cuerpo) {
         var id = String(actual[tabla.indice.id_articulo]).trim().toLowerCase();
         var h = String(actual[tabla.indice.hash_token]).trim().toLowerCase();
         if (id !== entrada.articulo || h !== entrada.hash) throw new Error('La fila ' + n + ' cambió durante soltar');
-        tabla.hoja.getRange(n, tabla.indice.estado + 1).setValue('liberado');
+        // Primero la fecha: si falla la segunda escritura, la fila sigue activa y reintentar la repara.
         tabla.hoja.getRange(n, tabla.indice.liberado + 1).setValue(ahora);
+        tabla.hoja.getRange(n, tabla.indice.estado + 1).setValue('liberado');
       });
       SpreadsheetApp.flush();
       invalidarVer_();
@@ -613,7 +614,12 @@ function aplicarFrecuencia_(hash) {
 }
 
 function invalidarVer_() {
-  CacheService.getScriptCache().put('ver:gen', String(Date.now()), 21600);
+  // La escritura ya quedó en la hoja: un fallo de caché no debe convertirla en error_interno.
+  try {
+    CacheService.getScriptCache().put('ver:gen', String(Date.now()), 21600);
+  } catch (e) {
+    console.warn('No se pudo invalidar la caché de ver: ' + e);
+  }
 }
 
 function sha256Hex_(texto) {
@@ -848,6 +854,9 @@ function prepararResumen_(libro, articulos, colReg) {
   hoja.getRange(fBitacora + 1, 1).setFormula(F('=QUERY(registros!A:' + ultimaCol + ';"select ' + [q('id_articulo'), q('tipo'),
     q('nombre'), q('creado'), q('origen')].join(', ') + ' where ' + q('id_articulo') + ' is not null and (' + q('estado')
     + ' = \'activo\' or ' + q('estado') + ' is null) order by ' + q('creado') + ' desc";1)'));
+  // Una hoja nueva trae 1000 filas: hay que crecerla antes de formatear la bitácora completa.
+  var hasta = fBitacora + 1 + LIMITES.MAX_FILAS_REGISTROS;
+  if (hoja.getMaxRows() < hasta) hoja.insertRowsAfter(hoja.getMaxRows(), hasta - hoja.getMaxRows());
   hoja.getRange(fBitacora + 2, 4, LIMITES.MAX_FILAS_REGISTROS, 1).setNumberFormat('d/m/yyyy h:mm am/pm');
 
   // Duplicado: texto + rojo (el color es solo refuerzo).

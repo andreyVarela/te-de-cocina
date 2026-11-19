@@ -1,7 +1,7 @@
 # ADR 0001 · Backend y hosting
 
 Estado: aceptado por Andrey (2026-11-19). Sustituye la propuesta inicial con Supabase.
-Contrato técnico que implementan FORGE y AURORA: `docs/arquitectura/contrato.md`.
+Contrato técnico del backend y la página: `docs/arquitectura/contrato.md`.
 
 ## Decisión
 
@@ -67,7 +67,7 @@ Contrato técnico que implementan FORGE y AURORA: `docs/arquitectura/contrato.md
 - **Soltar depende del mismo dispositivo:** sin ese navegador no puede soltar; la UI lo dice y
   Andrey libera en la hoja. Decisión de producto aprobada.
 - **Pruebas sin Apps Script local:** la lógica de negocio va en funciones puras (`Logica.js`, sin
-  APIs de Google) que FORGE prueba con `node --test`; las APIs de Google quedan en una capa fina
+  APIs de Google) que se prueba con `node --test`; las APIs de Google quedan en una capa fina
   (`Servidor.js`). El contrato real se verifica con `curl` contra la web app desplegada (§9 del
   contrato).
 
