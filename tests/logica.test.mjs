@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import { runInThisContext } from 'node:vm';
 
 const EXPORTA = ['LIMITES', 'validarToken', 'validarNombre', 'nombrePila', 'validarArticulo', 'prepararApartar',
-  'prepararSoltar', 'proyectarPublico', 'decidirApartar', 'decidirSoltar', 'normalizarArticulos',
+  'prepararSoltar', 'proyectarPublico', 'decidirApartar', 'decidirSoltar', 'normalizarArticulos', 'idDesdeTexto',
   'normalizarRegistros', 'estadoArticulo', 'decidirFrecuencia', 'controlFrecuencia', 'textoSeguroParaCelda',
   'formulaConSeparador', 'letraColumna'];
 const codigo = readFileSync(new URL('../apps-script/Logica.js', import.meta.url), 'utf8');
@@ -21,11 +21,12 @@ const T2 = nuevoToken();
 const H1 = sha(T1);
 const H2 = sha(T2);
 
+// En el orden de la hoja (la pestaña «articulos» es el panel de Andrey).
 const ARTICULOS = L.normalizarArticulos([
-  { id: 'licuadora', orden: 2, activo: 'si' },
-  { id: 'sarten-20', orden: 1, activo: 'si' },
-  { id: 'tazas', orden: 3, activo: 'si' },
-  { id: 'vieja', orden: 4, activo: 'no' },
+  { id: 'sarten-20', cat: 'Cocina', que: 'Sartén', producto: 'Sartén 20 cm', tienda: 'Novex', url: 'https://novex.cr/s', imagen: 'https://img.cr/s.jpg', precio_crc: 2800, cantidad: 1, aviso: '', activo: 'si' },
+  { id: 'licuadora', cat: 'Cocina', que: 'Licuadora', activo: 'si' },
+  { id: 'tazas', cat: 'Mesa', que: 'Tazas (4)', precio_crc: 400, cantidad: 4, activo: 'si' },
+  { id: 'vieja', que: 'Vieja', activo: 'no' },
 ]);
 
 /** Simula la hoja `registros`: lee (normaliza) y escribe como lo hace Servidor.js dentro del lock. */
@@ -196,17 +197,22 @@ test('8. ver: solo id/apartado_por/parecidos/mio, estado vacío = activo, ids de
     { id_articulo: 'vieja', tipo: 'apartado', nombre: 'Viejo', hash_token: H1, estado: 'activo' },
   ]);
   const ver = L.proyectarPublico(ARTICULOS, h.leer(), H1, new Date('2026-11-19T18:00:00Z'));
-  assert.deepEqual(Object.keys(ver).sort(), ['articulos', 'generado_en', 'ok']);
+  assert.deepEqual(Object.keys(ver).sort(), ['articulos', 'catalogo', 'generado_en', 'ok']);
   assert.equal(ver.generado_en, '2026-11-19T18:00:00.000Z');
   assert.deepEqual(ver.articulos.map((a) => a.id), ['sarten-20', 'licuadora', 'tazas']);  // en orden y sin inactivos
   for (const a of ver.articulos) assert.deepEqual(Object.keys(a).sort(), ['apartado_por', 'id', 'mio', 'parecidos']);
-  const json = JSON.stringify(ver);
+  const json = JSON.stringify(ver.articulos);
   for (const prohibido of ['María José', 'Vargas', H1, H2, 'hash_token', 'creado', 'origen', 'nombre', 'Fantasma', 'invitado', 'admin']) {
     assert.ok(!json.includes(prohibido), `ver no debe incluir «${prohibido}»`);
   }
   assert.deepEqual(ver.articulos[1], { id: 'licuadora', apartado_por: 'María', parecidos: [], mio: 'apartado' });
   assert.deepEqual(ver.articulos[2], { id: 'tazas', apartado_por: 'Tía', parecidos: [], mio: null });
   assert.deepEqual(ver.articulos[0], { id: 'sarten-20', apartado_por: null, parecidos: [], mio: null });
+  // Catálogo público: mismo orden, solo campos de la vitrina.
+  assert.deepEqual(ver.catalogo.map((a) => a.id), ['sarten-20', 'licuadora', 'tazas']);
+  assert.deepEqual(ver.catalogo[0], { id: 'sarten-20', cat: 'Cocina', que: 'Sartén', producto: 'Sartén 20 cm', tienda: 'Novex',
+    url: 'https://novex.cr/s', imagen: 'https://img.cr/s.jpg', precio_crc: 2800, cantidad: 1, aviso: '' });
+  assert.ok(!JSON.stringify(ver.catalogo).includes('activo'));
   // Sin hash (token ausente o inválido): mio siempre null.
   assert.ok(L.proyectarPublico(ARTICULOS, h.leer(), null, new Date()).articulos.every((a) => a.mio === null));
 });
@@ -303,4 +309,31 @@ test('formulaConSeparador respeta el texto entre comillas', () => {
   assert.equal(L.letraColumna(1), 'A');
   assert.equal(L.letraColumna(8), 'H');
   assert.equal(L.letraColumna(27), 'AA');
+});
+
+test('8c. articulos desde la hoja: valida enlaces, números, topes, ids repetidos y filas sin nombre', () => {
+  const a = L.normalizarArticulos([
+    { id: ' Olla ', cat: '', que: '  Olla\ncon   tapa ', producto: 'x'.repeat(300), tienda: 'Novex', url: 'javascript:alert(1)',
+      imagen: 'http://inseguro.cr/a.jpg', precio_crc: '₡4 800', cantidad: '2', aviso: 'Medir antes', activo: '' },
+    { id: 'olla', que: 'Repetida', activo: 'si' },
+    { id: 'sin-nombre', que: '', activo: 'si' },
+    { id: 'raro', que: 'Raro', url: 'https://bien.cr/p?x=1', imagen: 'https://bien.cr/i.jpg', precio_crc: 'consultar', cantidad: 999, activo: 'FALSE' },
+    { id: '', que: 'Sin id', activo: 'si' },
+  ]);
+  assert.deepEqual(a.map((x) => x.id), ['olla', 'sin-nombre', 'raro']);
+  assert.deepEqual(a[0], { id: 'olla', cat: 'Otros', que: 'Olla con tapa', producto: 'x'.repeat(120), tienda: 'Novex', url: '',
+    imagen: '', precio_crc: 4800, cantidad: 2, aviso: 'Medir antes', activo: true });
+  assert.equal(a[1].activo, false, 'sin nombre no se muestra');
+  assert.equal(a[2].activo, false);
+  assert.equal(a[2].url, 'https://bien.cr/p?x=1');
+  assert.equal(a[2].precio_crc, null);
+  assert.equal(a[2].cantidad, 1);
+  assert.equal(L.validarArticulo('sin-nombre', a).codigo, 'articulo_invalido');
+});
+
+test('8d. idDesdeTexto: estable, ascii y corto', () => {
+  assert.equal(L.idDesdeTexto('Sartén antiadherente 20 cm'), 'sarten-antiadherente-20-cm');
+  assert.equal(L.idDesdeTexto('  ¡Café & té!  '), 'cafe-te');
+  assert.equal(L.idDesdeTexto('🙂'), '');
+  assert.ok(L.idDesdeTexto('a'.repeat(80)).length <= 40);
 });

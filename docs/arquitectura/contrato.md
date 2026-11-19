@@ -75,15 +75,26 @@ instante (Date); la API lo serializa en ISO UTC. Borrado lógico con `estado`. F
 exactos (el script localiza columnas **por nombre de encabezado**, no por letra, para que Andrey
 pueda ensanchar o reordenar sin romper nada; lo que no puede es renombrar encabezados).
 
-### Pestaña `articulos` (la escribe `setup()`; Andrey no la toca)
+### Pestaña `articulos` (el panel de Andrey; `setup()` solo siembra lo que falte)
+La hoja manda: la página dibuja el catálogo que devuelve `ver`, en el orden de las filas.
+`catalogo.json` es la semilla (y el respaldo que el build deja en el HTML si `ver` no responde).
+
 | encabezado | tipo | notas |
 |---|---|---|
-| `id` | texto | slug de `catalogo.json` |
-| `que` | texto | título |
-| `producto` | texto | subtítulo |
-| `cantidad` | número | ≥ 1 |
-| `orden` | número | posición en el JSON |
-| `activo` | `si` / `no` | `no` si desapareció del JSON |
+| `id` | texto | slug estable. `onEdit` lo pone solo (desde `que`, único) en filas nuevas |
+| `cat` | texto | sección; vacío = «Otros» (tope 30) |
+| `que` | texto | título; sin él la fila no sale (tope 80) |
+| `producto` | texto | subtítulo (tope 120) |
+| `tienda` | texto | «Ver en …» (tope 40) |
+| `url` | texto | solo `https://`; otra cosa se descarta |
+| `imagen` | texto | solo `https://`; otra cosa se descarta |
+| `precio_crc` | número | entero ≥ 0; acepta «₡2 800»; vacío = «Sin precio» |
+| `cantidad` | número | 1 a 50; otra cosa = 1 |
+| `aviso` | texto | nota corta (tope 160) |
+| `activo` | `si` / `no` | `no` (o FALSE) la esconde; ids repetidos: gana la primera fila |
+
+Migración: si existe la columna vieja `orden`, `setup()` ordena las filas por ella, la quita y
+deja las columnas en este orden (las columnas propias de Andrey quedan al final).
 
 ### Pestaña `registros` (la escribe el script; Andrey edita para corregir)
 | encabezado | tipo | quién la llena | notas |
@@ -105,6 +116,9 @@ Reglas que el script hace cumplir sobre esta pestaña (siempre dentro del lock, 
   más alta y `resumen` lo marca en rojo con texto «Duplicado» (ver abajo).
 
 ### Pestaña `resumen` (la escribe `setup()` con fórmulas; solo lectura)
+La lista de artículos sale de `articulos` con `FILTER` + `MAP(LAMBDA)`, así que se actualiza sola
+cuando Andrey agrega o esconde filas. La bitácora va a la derecha (columna H). Lo de abajo es el
+diseño original; el detalle exacto vive en `prepararResumen_` (Servidor.js).
 - Fila 1: `="Apartados: "&COUNTIFS(registros!B:B;"apartado";registros!F:F;"activo")&" de "&COUNTIF(articulos!F:F;"si")&" · Parecidos: "&COUNTIFS(registros!B:B;"parecido";registros!F:F;"activo")`.
 - Bloque A (uno por artículo, en `orden`): `que` · `producto` · **Apartado por** (nombre completo
   del apartado activo, `IFERROR(INDEX(FILTER(…),1);"—")`) · **Parecidos** (`TEXTJOIN(", ";TRUE;FILTER(…))`) ·
@@ -206,11 +220,14 @@ escrito. Nunca «Listo» sin `ok: true`. Los `mensaje` son sugerencia (el copy f
 ```
 { "ok": true, "generado_en": "<UTC ISO>",
   "articulos": [ { "id": "licuadora", "apartado_por": "Ana"|null, "parecidos": ["Luis","Marta"],
-                   "mio": null | "apartado" | "parecido" } ] }
+                   "mio": null | "apartado" | "parecido" } ],
+  "catalogo":  [ { "id", "cat", "que", "producto", "tienda", "url", "imagen", "precio_crc",
+                   "cantidad", "aviso" } ] }
 ```
-Todos los artículos activos (aunque no tengan registros), en `orden`. Solo nombres de pila. `mio`
-se calcula con el hash del token si viene y es válido; si es inválido se ignora (`mio = null`), no
-es error. Los textos y fotos no viajan: ya están en el HTML.
+Todos los artículos visibles (aunque no tengan registros), en el orden de la hoja; `catalogo` trae
+los mismos ids en el mismo orden. Solo nombres de pila. `mio` se calcula con el hash del token si
+viene y es válido; si es inválido se ignora (`mio = null`), no es error. `app.js` dibuja la lista
+con `catalogo` (textContent; enlaces y fotos solo `https://`) y usa el HTML como respaldo.
 
 ### `apartar` (POST) · `TDC.api.apartar(id, nombre, parecido)`
 ```
@@ -270,9 +287,9 @@ algo que alguien tenía abierto»). Errores: `articulo_invalido`, `token_invalid
   Implementar → Administrar implementaciones → lápiz → Versión «Nueva versión» → Implementar (la
   URL no cambia).
 - `setup()` (idempotente, se puede repetir): crea las pestañas si faltan, escribe encabezados,
-  validaciones de datos (`tipo`, `estado`, `origen`), protege la fila 1 y la pestaña `articulos`
-  con aviso, hace upsert de `CATALOGO` por `id` (actualiza textos, `activo = si`, y `activo = no`
-  a los que ya no están), escribe las fórmulas de `resumen` y fija la zona horaria del script en
+  validaciones de datos (`tipo`, `estado`, `origen`, `activo`), protege con aviso solo las filas de
+  encabezados, siembra `CATALOGO` en `articulos` (filas de ids que falten y celdas vacías; nunca
+  pisa lo que Andrey escribió ni cambia `activo`), escribe las fórmulas de `resumen` y fija la zona horaria del script en
   el manifiesto si es posible (si no, Andrey la pone en la hoja; ambas deben ser Costa Rica).
 - `.github/workflows/pages.yml`: push a `main` → `actions/setup-node@v4` (Node 20) → `node
   scripts/build.mjs` → `actions/upload-pages-artifact` → `actions/deploy-pages`. Sin `npm ci`.

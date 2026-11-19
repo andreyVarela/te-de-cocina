@@ -58,24 +58,64 @@ function clave_(v) {
   return texto_(v).toLowerCase();
 }
 
+// Topes de texto del catálogo que Andrey escribe en la hoja (lo que pase se corta).
+var TOPES_ARTICULO = Object.freeze({ cat: 30, que: 80, producto: 120, tienda: 40, aviso: 160, url: 600 });
+var CAT_POR_DEFECTO = 'Otros';
+
+/** Texto de una celda del catálogo: sin controles, sin espacios dobles y con tope de largo. */
+function textoCatalogo_(v, tope) {
+  return texto_(v).replace(/[\u0000-\u001F\u007F]+/g, ' ').replace(/\s+/g, ' ').slice(0, tope);
+}
+
+/** Solo enlaces https; cualquier otra cosa (javascript:, http:, texto suelto) queda vacía. */
+function urlSegura_(v) {
+  var u = texto_(v);
+  return /^https:\/\/[^\s"'<>]+$/i.test(u) && u.length <= TOPES_ARTICULO.url ? u : '';
+}
+
+/** Entero ≥ 0 a partir de «2800», «₡2 800» o «2.800»; null si no hay número. */
+function enteroCelda_(v) {
+  if (typeof v === 'number') return isFinite(v) && v >= 0 ? Math.round(v) : null;
+  var digitos = texto_(v).replace(/[^0-9]/g, '');
+  return digitos ? Number(digitos) : null;
+}
+
+/** Id estable a partir de un nombre: «Sartén 20 cm» → «sarten-20-cm». */
+function idDesdeTexto(v) {
+  return texto_(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/, '');
+}
+
 /**
- * Filas de la pestaña `articulos` (objetos por encabezado) → [{ id, orden, activo }] en `orden`.
- * `activo` es falso solo si la celda dice «no» (o FALSE): así un «Sí» escrito a mano no rompe nada.
+ * Filas de la pestaña `articulos` (objetos por encabezado) → artículos en el ORDEN DE LA HOJA.
+ * La hoja es el panel de Andrey: cada fila trae su catálogo (cat, que, producto, tienda, url, imagen,
+ * precio_crc, cantidad, aviso). `activo` es falso solo si la celda dice «no» (o FALSE), y una fila
+ * sin `id` o sin `que` no se muestra ni se puede apartar. Ids repetidos: gana la primera fila.
  */
 function normalizarArticulos(filas) {
   var lista = [];
-  (filas || []).forEach(function (f, i) {
+  var vistos = {};
+  (filas || []).forEach(function (f) {
     var id = clave_(f.id);
-    if (!id) return;
+    if (!id || vistos[id]) return;
+    vistos[id] = true;
     var act = clave_(f.activo);
-    var orden = Number(f.orden);
+    var que = textoCatalogo_(f.que, TOPES_ARTICULO.que);
+    var cantidad = enteroCelda_(f.cantidad);
     lista.push({
       id: id,
-      orden: isFinite(orden) && texto_(f.orden) !== '' ? orden : 100000 + i,
-      activo: !(act === 'no' || act === 'false'),
+      cat: textoCatalogo_(f.cat, TOPES_ARTICULO.cat) || CAT_POR_DEFECTO,
+      que: que,
+      producto: textoCatalogo_(f.producto, TOPES_ARTICULO.producto),
+      tienda: textoCatalogo_(f.tienda, TOPES_ARTICULO.tienda),
+      url: urlSegura_(f.url),
+      imagen: urlSegura_(f.imagen),
+      precio_crc: enteroCelda_(f.precio_crc),
+      cantidad: cantidad && cantidad <= 50 ? cantidad : 1,
+      aviso: textoCatalogo_(f.aviso, TOPES_ARTICULO.aviso),
+      activo: !(act === 'no' || act === 'false') && que !== '',
     });
   });
-  lista.sort(function (a, b) { return a.orden - b.orden; });
   return lista;
 }
 
@@ -209,7 +249,7 @@ function estadoArticulo(registros, articuloId) {
 }
 
 /**
- * Respuesta de `ver` (§6): todos los artículos activos en `orden`, con nombre de pila del apartado,
+ * Respuesta de `ver` (§6): todos los artículos activos en el orden de la hoja, con nombre de pila del apartado,
  * pilas de parecidos y `mio`. Nunca nombre completo, hash_token, creado ni origen.
  * `hash` puede ser null (token ausente o inválido → mio = null). `ahora` (Date) lo pasa quien llama.
  */
@@ -222,11 +262,19 @@ function proyectarPublico(articulos, registros, hash, ahora) {
       if (mios[r.id_articulo] !== 'apartado') mios[r.id_articulo] = r.tipo;
     });
   }
-  var lista = articulos.filter(function (a) { return a.activo; }).map(function (a) {
+  var visibles = articulos.filter(function (a) { return a.activo; });
+  var lista = visibles.map(function (a) {
     var e = estadoArticulo(activos, a.id);
     return { id: a.id, apartado_por: e.apartado_por, parecidos: e.parecidos, mio: mios[a.id] || null };
   });
-  return { ok: true, generado_en: ahora.toISOString(), articulos: lista };
+  // El catálogo público sale de la hoja: la página lo dibuja con esto (lo que trae el HTML es respaldo).
+  var catalogo = visibles.map(function (a) {
+    return {
+      id: a.id, cat: a.cat, que: a.que, producto: a.producto, tienda: a.tienda, url: a.url,
+      imagen: a.imagen, precio_crc: a.precio_crc, cantidad: a.cantidad, aviso: a.aviso,
+    };
+  });
+  return { ok: true, generado_en: ahora.toISOString(), articulos: lista, catalogo: catalogo };
 }
 
 // ------------------------------------------------------------------ decisiones de escritura
