@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#F3EFE6">
+<meta name="tdc:api-url" content="{{API_URL}}">
+<title>Carnita y té de cocina · Andrey</title>
+<script>document.documentElement.className = document.documentElement.className.replace('no-js', 'js');</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<a class="saltar" href="#lista">Ir a la lista</a>
+<main class="hoja">
+  <header class="cabecera">
+    <span class="vertical" lang="ja" aria-hidden="true">新しい家へようこそ</span>
+    <div class="sello" lang="ja" aria-hidden="true">新居</div>
+    <span class="eyebrow">Invitación · Andrey estrena apartamento</span>
+    <h1>Carnita de cumple y té de cocina</h1>
+    <p class="lead">Cumplo años y me paso a vivir solo, así que lo celebramos juntos: carne a la parrilla, buena compañía y el apartamento nuevo.</p>
+    <dl class="datos">
+      <div><dt>Fecha</dt><dd data-dato="fecha">{{FECHA}}</dd></div>
+      <div><dt>Hora</dt><dd data-dato="hora">{{HORA}}</dd></div>
+      <div><dt>Lugar</dt><dd>{{LUGAR}}</dd></div>
+    </dl>
+    <p class="nota">La dirección y los detalles te los paso por WhatsApp.</p>
+  </header>
+
+  <section class="como" aria-labelledby="como-titulo">
+    <h2 id="como-titulo">Si quieres traer algo</h2>
+    <ol class="pasos">
+      <li><b>Elige una cosa</b> de la lista; cada una trae una opción de referencia.</li>
+      <li><b>Apártala</b> con tu nombre, así nadie la repite.</li>
+      <li><b>O lleva algo parecido</b>, de donde quieras.</li>
+    </ol>
+    <noscript><p class="aviso-global" role="note"><span aria-hidden="true">!</span> Esta página necesita JavaScript para apartar. Puedes ver la lista igual; para apartar algo, escríbeme por WhatsApp.</p></noscript>
+  </section>
+
+  <section class="lista" id="lista" aria-labelledby="lista-titulo" tabindex="-1">
+    <div class="lista-cabeza">
+      <h2 id="lista-titulo">Lo que le falta al apartamento</h2>
+      <p class="lista-intro">Nada es obligatorio y cada quien trae lo que quiera. Lo más importante es que llegues.</p>
+    </div>
+    <div class="barra" id="barra" role="status" aria-live="polite">
+      <p class="barra-texto" id="barra-texto">Cargando lo apartado…</p>
+      <button type="button" class="boton boton-texto" id="barra-recargar" hidden>Actualizar</button>
+    </div>
+    <p class="aviso-global" id="aviso-conexion" role="note" hidden><span aria-hidden="true">!</span> No se pudo ver qué está apartado. Puedes ver la lista, pero para apartar hace falta conexión. Toca «Reintentar» arriba.</p>
+    <p class="aviso-global" id="aviso-dispositivo" role="note" hidden><span aria-hidden="true">!</span> Este navegador no guarda datos (puede ser modo privado). Puedes apartar igual, pero para soltar algo después tendrás que avisarme por WhatsApp.</p>
+    <p class="lista-vacia" id="lista-vacia" hidden>Todavía no hay nada en la lista. Vuelve a abrir el enlace en unos días.</p>
+{{{CATEGORIAS}}}
+    <div class="lista-pie">
+      <p class="nota">Si apartaste algo y ya no puedes llevarlo, toca «Soltar» desde el mismo celular. ¿Lo apartaste desde otro celular? Avísame por WhatsApp y yo lo suelto.</p>
+      <p class="nota">Los precios son aproximados, de Pequeño Mundo y EPA vistos el 19 de noviembre, y pueden cambiar.</p>
+    </div>
+  </section>
+
+  <footer class="pie">
+    <span>Gracias por ayudarme a armar el apartamento.</span>
+  </footer>
+</main>
+<script src="api.js" defer></script>
+<script src="app.js" defer></script>
+</body>
+</html>

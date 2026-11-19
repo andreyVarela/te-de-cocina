@@ -1,0 +1,56 @@
+# Publica la página en GitHub Pages cada vez que algo llega a main (contrato §8).
+# Sin secretos: api_url es pública por diseño y vive en evento.json. Sin npm: Node trae todo.
+name: Publicar página
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Construir dist/ y Code.gs desde catalogo.json + evento.json
+        run: node scripts/build.mjs
+
+      - name: Pruebas de la lógica (sin Google)
+        run: node --test tests/*.test.mjs
+
+      # Por si se editó catalogo.json desde la web: aquí queda el Code.gs nuevo para descargar
+      # (pestaña Actions → esta ejecución → Artifacts → Code.gs) y pegarlo en Apps Script.
+      - name: Guardar Code.gs generado
+        uses: actions/upload-artifact@v4
+        with:
+          name: Code.gs
+          path: apps-script/Code.gs
+          retention-days: 30
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

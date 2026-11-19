@@ -1,0 +1,6 @@
+{
+  "_ayuda": "Fecha y hora: deja null para que diga «Por confirmar». Para fijarla, escribe entre comillas fecha y hora de Costa Rica terminando en -06:00. Ejemplo: \"2026-12-05T14:00:00-06:00\" = sábado 5 de diciembre, 2:00 p. m. En api_url va la URL de la aplicación web de Apps Script (termina en /exec), nunca el enlace de la hoja.",
+  "empieza_en": null,
+  "lugar": "Mi apartamento",
+  "api_url": "https://script.google.com/macros/s/XXXX/exec"
+}

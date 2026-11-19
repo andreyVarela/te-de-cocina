@@ -1,7 +1,8 @@
 [
  {
+  "id": "sarten-20",
   "cat": "Cocina",
-  "que": "Juego de sartenes antiadherentes",
+  "que": "Sartén antiadherente 20 cm",
   "producto": "Sartén antiadherente aluminio 20cm",
   "tienda": "Pequeño Mundo",
   "url": "https://tienda.pequenomundo.com/sarten-antiadherente-aluminio-20-cm.html",
@@ -12,8 +13,9 @@
   "nota": "Pequeño Mundo no vende juego de 2; se arma con sartén 20 cm + 24 cm (más barato que el set de EPA ₡8 950)"
  },
  {
+  "id": "sarten-24",
   "cat": "Cocina",
-  "que": "Juego de sartenes antiadherentes",
+  "que": "Sartén antiadherente 24 cm",
   "producto": "Sartén antiadherente aluminio 24cm",
   "tienda": "Pequeño Mundo",
   "url": "https://tienda.pequenomundo.com/sarten-antiadherente-aluminio-24-cm.html",
@@ -24,6 +26,7 @@
   "nota": "Segunda pieza del juego"
  },
  {
+  "id": "olla-tapa-20",
   "cat": "Cocina",
   "que": "Olla con tapa",
   "producto": "Olla antiadherente con tapa aluminio 20cm",
@@ -36,6 +39,7 @@
   "nota": "La olla roja cerámica del borrador ya no existe (404)"
  },
  {
+  "id": "arrocera",
   "cat": "Cocina",
   "que": "Olla arrocera",
   "producto": "Olla arrocera 10 tazas Westinghouse",
@@ -48,6 +52,7 @@
   "nota": "Única arrocera en Pequeño Mundo; la Home Essential 5 tazas del borrador ya no existe (404)"
  },
  {
+  "id": "hervidor",
   "cat": "Cocina",
   "que": "Hervidor eléctrico",
   "producto": "Tetera eléctrica 1.8lt 1200w",
@@ -59,6 +64,7 @@
   "verificado": true
  },
  {
+  "id": "licuadora",
   "cat": "Cocina",
   "que": "Licuadora",
   "producto": "Licuadora jarra plástica 1.5lt 600w",
@@ -71,6 +77,7 @@
   "nota": "La licuadora 350 W del borrador ya no existe (404); esta es la más barata"
  },
  {
+  "id": "cuchillo-chef",
   "cat": "Cocina",
   "que": "Cuchillo de chef",
   "producto": "Cuchillo chef acero inoxidable 8in",
@@ -83,6 +90,7 @@
   "nota": "Hay versión 7 in a ₡1 000"
  },
  {
+  "id": "tabla-bambu",
   "cat": "Cocina",
   "que": "Tabla de picar de bambú",
   "producto": "Tabla picar bambú 30x23cm",
@@ -94,6 +102,7 @@
   "verificado": true
  },
  {
+  "id": "utensilios-bambu",
   "cat": "Cocina",
   "que": "Utensilios de bambú",
   "producto": "Utensilios cocina bambú 30cm 3unds",
@@ -105,6 +114,7 @@
   "verificado": true
  },
  {
+  "id": "hermeticos",
   "cat": "Cocina",
   "que": "Recipientes herméticos",
   "producto": "Recipiente hermético cuadrado vidrio 0.32-0.8lt 2pcs",
@@ -117,6 +127,7 @@
   "nota": "Vidrio, 2 piezas"
  },
  {
+  "id": "refractario",
   "cat": "Cocina",
   "que": "Refractario de vidrio",
   "producto": "Refractario rectangular vidrio borosilicato 1.6lt-3lt 2pcs",
@@ -129,6 +140,7 @@
   "nota": "Más barato que el Marinex con tapa (₡7 400)"
  },
  {
+  "id": "escurridor",
   "cat": "Cocina",
   "que": "Escurridor de platos",
   "producto": "Escurridor platos con bandeja plástico 35x31x13cm 2pcs",
@@ -141,6 +153,7 @@
   "nota": "Ya no hay escurridor de bambú; plástico con bandeja"
  },
  {
+  "id": "basurero-cocina",
   "cat": "Cocina",
   "que": "Basurero de cocina con pedal",
   "producto": "Basurero manual y pedal plástico 10lt",
@@ -152,6 +165,7 @@
   "verificado": true
  },
  {
+  "id": "panos",
   "cat": "Cocina",
   "que": "Paños de cocina",
   "producto": "Paño microfibra 40x40cm 15unds",
@@ -163,6 +177,7 @@
   "verificado": true
  },
  {
+  "id": "vajilla",
   "cat": "Mesa",
   "que": "Vajilla",
   "producto": "Vajilla cerámica 12pcs",
@@ -175,6 +190,7 @@
   "nota": "Color beige mate (estilo minimal)"
  },
  {
+  "id": "bowls",
   "cat": "Mesa",
   "que": "Bowls para ramen o sopa (2)",
   "producto": "Bowl grande temperado 9in",
@@ -187,6 +203,7 @@
   "nota": "Precio por unidad; se compran 2"
  },
  {
+  "id": "cubiertos",
   "cat": "Mesa",
   "que": "Cubiertos para 4",
   "producto": "Cubiertos imitación madera acero inoxidable 16pcs",
@@ -198,6 +215,7 @@
   "verificado": true
  },
  {
+  "id": "palillos",
   "cat": "Mesa",
   "que": "Palillos (chopsticks)",
   "producto": "Palillos chinos madera 200unds",
@@ -210,6 +228,7 @@
   "nota": "Desechables de madera; no hay palillos reutilizables en Pequeño Mundo ni en EPA"
  },
  {
+  "id": "vasos",
   "cat": "Mesa",
   "que": "Vasos",
   "producto": "Vaso liso vidrio 14oz 3unds",
@@ -221,6 +240,7 @@
   "verificado": true
  },
  {
+  "id": "tazas",
   "cat": "Mesa",
   "que": "Tazas (4)",
   "producto": "Taza básica blanca 324.4ml",
@@ -233,6 +253,7 @@
   "nota": "Precio por unidad; se compran 4"
  },
  {
+  "id": "tetera",
   "cat": "Mesa",
   "que": "Tetera",
   "producto": "Tetera acero inoxidable 2.5lt",
@@ -245,8 +266,9 @@
   "nota": "No hay tetera de vidrio con infusor en Pequeño Mundo ni en EPA; tetera de acero para estufa"
  },
  {
+  "id": "escoba",
   "cat": "Limpieza",
-  "que": "Escoba y pala",
+  "que": "Escoba",
   "producto": "Escoba y palo madera 120cm",
   "tienda": "Pequeño Mundo",
   "url": "https://tienda.pequenomundo.com/escoba.html",
@@ -257,8 +279,9 @@
   "nota": "Escoba"
  },
  {
+  "id": "pala",
   "cat": "Limpieza",
-  "que": "Escoba y pala",
+  "que": "Pala para basura",
   "producto": "Pala basura plástica 27.5x21x80cm",
   "tienda": "Pequeño Mundo",
   "url": "https://tienda.pequenomundo.com/pala-basura-plastica-75cm.html",
@@ -269,6 +292,7 @@
   "nota": "Pala"
  },
  {
+  "id": "mopa",
   "cat": "Limpieza",
   "que": "Mopa de microfibra (que no suelte pelusa)",
   "producto": "Mopa limpieza plana poliéster 43x14x5cm",
@@ -281,6 +305,7 @@
   "nota": "Mopa plana de microfibra (la ficha dice 'microfibra de gran absorción'); no promete explícitamente que no suelte pelusa"
  },
  {
+  "id": "balde",
   "cat": "Limpieza",
   "que": "Balde",
   "producto": "Balde 18 litros con agarradera",
@@ -293,6 +318,7 @@
   "nota": "Pequeño Mundo solo tiene un balde de juguete; EPA tiene también cubeta 10 L con tapa a ₡2 055"
  },
  {
+  "id": "tendedero",
   "cat": "Limpieza",
   "que": "Tendedero plegable",
   "producto": "Tendedero vertical plástico y acero 68x68x170cm",
@@ -305,6 +331,7 @@
   "nota": "Hay uno extendible de acero a ₡7 100"
  },
  {
+  "id": "plancha",
   "cat": "Limpieza",
   "que": "Plancha",
   "producto": "Plancha vapor Westinghouse 1200w",
@@ -316,6 +343,7 @@
   "verificado": true
  },
  {
+  "id": "toallas",
   "cat": "Baño",
   "que": "Toallas de baño (2)",
   "producto": "Toalla baño blanca Algodón 68x135cm",
@@ -328,6 +356,7 @@
   "nota": "Precio por unidad; se compran 2"
  },
  {
+  "id": "cortina-bano",
   "cat": "Baño",
   "que": "Cortina de baño",
   "producto": "Cortina baño tela poliéster 180x180cm",
@@ -340,6 +369,7 @@
   "nota": "Incluye 12 ganchos"
  },
  {
+  "id": "accesorios-bano",
   "cat": "Baño",
   "que": "Set de accesorios de baño",
   "producto": "Dispensador jabón con base vidrio 3pcs",
@@ -352,6 +382,7 @@
   "nota": "El de cerámica 2 pzs está agotado"
  },
  {
+  "id": "basurero-bano",
   "cat": "Baño",
   "que": "Basurero de baño",
   "producto": "Basurero redondo tapa vaivén plástico 9lt",
@@ -363,6 +394,7 @@
   "verificado": true
  },
  {
+  "id": "cepillo-inodoro",
   "cat": "Baño",
   "que": "Cepillo para inodoro",
   "producto": "Cepillo inodoro plástico 12x12x37cm 2pcs",
@@ -374,6 +406,7 @@
   "verificado": true
  },
  {
+  "id": "tapete",
   "cat": "Casa",
   "que": "Tapete de entrada",
   "producto": "Alfombra entrada fibra coco y caucho 40x60cm",
@@ -385,9 +418,11 @@
   "verificado": true
  },
  {
+  "id": "bambu-suerte",
   "cat": "Casa",
   "que": "Bambú de la suerte",
-  "producto": "Lucky bambú 10 cm (Únicamente para retiro en tienda)",
+  "producto": "Lucky bambú 10 cm",
+  "aviso": "Únicamente para retiro en tienda",
   "tienda": "EPA",
   "url": "https://cr.epaenlinea.com/es-cr/products/lucky-bambu-10-cm-unicamente-para-retiro-en-tienda",
   "imagen": "https://cr.epaenlinea.com/cdn/shop/files/100013732.jpg?v=1790725319",
@@ -397,9 +432,11 @@
   "nota": "Solo retiro en tienda; no hay en Pequeño Mundo"
  },
  {
+  "id": "incienso",
   "cat": "Casa",
   "que": "Incienso",
-  "producto": "Incienso (Únicamente para retiro en tienda)",
+  "producto": "Incienso",
+  "aviso": "Únicamente para retiro en tienda",
   "tienda": "EPA",
   "url": "https://cr.epaenlinea.com/es-cr/products/incienso-unicamente-para-retiro-en-tienda",
   "imagen": "https://cr.epaenlinea.com/cdn/shop/files/100013668.jpg?v=1790725365",
@@ -409,6 +446,7 @@
   "nota": "Solo retiro en tienda; no hay en Pequeño Mundo"
  },
  {
+  "id": "despensa",
   "cat": "Despensa",
   "que": "Algo para la despensa (arroz, té verde, aceite…)",
   "producto": "Arroz 99% entero Don Pedro 1.8kg",

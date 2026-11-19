@@ -45,7 +45,7 @@ Como invitado, quiero soltar lo que aparté, para liberarlo si ya no puedo lleva
 - En los artículos que **yo** aparté (o marqué como parecido) desde este dispositivo aparece «Soltar», con confirmación de un paso («¿Soltar Licuadora?»).
 - Al soltar, el artículo vuelve a `Disponible` para todos.
 - Los artículos de otras personas **no** muestran «Soltar».
-- Si el navegador no puede guardar datos (modo privado, celular viejo) o el invitado cambió de celular, aparece el texto «Para soltarlo, avísale a Andrey por WhatsApp». Nunca falla en silencio.
+- Si el navegador no puede guardar datos (modo privado, celular viejo) o el invitado cambió de celular, aparece el texto «Para soltarlo, avísame por WhatsApp y yo lo suelto» (voz de Andrey en primera persona, ajuste de IRIS). Nunca falla en silencio.
 - Soltar es idempotente: tocarlo dos veces no da error.
 
 ### H5. Vista de Andrey
