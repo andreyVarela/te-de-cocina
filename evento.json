@@ -1,6 +1,8 @@
 {
-  "_ayuda": "Fecha y hora: deja null para que diga «Por confirmar». Para fijarla, escribe entre comillas fecha y hora de Costa Rica terminando en -06:00. Ejemplo: \"2026-12-05T14:00:00-06:00\" = sábado 5 de diciembre, 2:00 p. m. En api_url va la URL de la aplicación web de Apps Script (termina en /exec), nunca el enlace de la hoja.",
-  "empieza_en": null,
-  "lugar": "Mi apartamento",
-  "api_url": "https://script.google.com/macros/s/AKfycbxXc5evEJ6cpyYzoLFdA2xlg1JxpMg4hJfybEgiJZC5zicx_1BF6i_QfjGGM-UxKWU/exec"
+  "_ayuda": "Una entrada por carnita en «eventos»; todas usan la misma lista. Fecha y hora: deja null para que diga «Por confirmar». Para fijarla, escribe entre comillas fecha y hora de Costa Rica terminando en -06:00. Ejemplo: \"2026-12-05T14:00:00-06:00\" = sábado 5 de diciembre, 2:00 p. m. «slug» es el final del link (…/te-de-cocina/familia); si lo cambias, cambia el link. En api_url va la URL de la aplicación web de Apps Script (termina en /exec), nunca el enlace de la hoja.",
+  "api_url": "https://script.google.com/macros/s/AKfycbxXc5evEJ6cpyYzoLFdA2xlg1JxpMg4hJfybEgiJZC5zicx_1BF6i_QfjGGM-UxKWU/exec",
+  "eventos": [
+    { "slug": "familia", "nombre": "Carnita con la familia", "empieza_en": null, "lugar": "Mi apartamento" },
+    { "slug": "amigos", "nombre": "Carnita con los amigos", "empieza_en": null, "lugar": "Mi apartamento" }
+  ]
 }

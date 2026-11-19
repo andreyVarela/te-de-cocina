@@ -3,9 +3,15 @@
 Página para apartar regalos sin cuenta. Los invitados abren el link de WhatsApp, apartan algo con su
 nombre o marcan «Llevo algo parecido». Tú ves y corriges todo en una hoja de Google.
 
+Hay una página por carnita, todas con la **misma lista** (lo que se aparta en una sale apartado en la otra):
+
+- Familia: `https://andreyvarela.github.io/te-de-cocina/familia`
+- Amigos: `https://andreyvarela.github.io/te-de-cocina/amigos`
+- Portada con las dos: `https://andreyvarela.github.io/te-de-cocina/`
+
 - **Página:** GitHub Pages (se publica sola al llegar algo a `main`).
 - **Datos:** una hoja de Google tuya, `te-de-cocina`, con un script pegado (Apps Script).
-- **Lo único que editas a mano:** `evento.json` (fecha, hora, lugar y la URL del script).
+- **Lo único que editas a mano:** `evento.json` (fecha, hora y lugar de cada carnita, y la URL del script).
 
 ---
 
@@ -39,16 +45,17 @@ nombre o marcan «Llevo algo parecido». Tú ves y corriges todo en una hoja de 
    build lo rechaza si lo intentas).
 2. **Commit changes.** Si GitHub te ofrece abrir un PR, ábrelo y dale **Merge**.
 3. Solo la primera vez: repo → **Settings → Pages → Source: GitHub Actions**.
-4. En ~1 minuto queda en `https://andreyvarela.github.io/te-de-cocina/`. En la pestaña **Actions**
+4. En ~1 minuto quedan las páginas de arriba. En la pestaña **Actions**
    ves si salió bien (check verde) o el error en español.
 
-## 3. Cambiar fecha u hora (desde el celular)
+## 3. Cambiar fecha, hora o lugar (desde el celular)
 
 1. En GitHub (navegador o app) abre `evento.json` → lápiz.
-2. Cambia `empieza_en`:
+2. En `eventos` hay una entrada por carnita (`familia` y `amigos`). En la que toque, cambia `empieza_en`:
    - Por confirmar: `"empieza_en": null`
    - Con fecha: `"empieza_en": "2026-12-05T14:00:00-06:00"` (año-mes-día, T, hora en 24 h, y
      siempre `-06:00`). Eso se ve como «sábado 5 de diciembre · 2:00 p. m.».
+   - `lugar` y `nombre` se cambian igual. **No cambies `slug`**: es el final del link que ya mandaste.
 3. Commit (y Merge si te pide PR). En ~1 minuto se actualiza. Si escribiste algo mal, la página
    no se rompe: Actions marca el error y la versión anterior sigue publicada.
 
@@ -121,7 +128,8 @@ bash tests/contrato.sh [URL_EXEC]   # contra la web app real (después de desple
 
 ### Plantillas (interfaz build ↔ `site/`)
 
-El build renderiza solo los `.html` de la raíz de `site/` (`index.html` o `plantilla.html` →
+El build renderiza dos `.html` de la raíz de `site/`: `index.html` es la plantilla de cada carnita
+(sale como `dist/<slug>.html`, una por entrada de `eventos`) e `inicio.html` es la portada (sale como
 `dist/index.html`). JS y CSS se copian tal cual (los marcadores en comentarios de JS no se tocan).
 
 - `{{nombre}}` → texto escapado para HTML. `{{{NOMBRE}}}` → HTML que genera el build.
@@ -130,7 +138,9 @@ El build renderiza solo los `.html` de la raíz de `site/` (`index.html` o `plan
 
 | Dónde | Marcadores |
 |---|---|
-| `site/index.html` | `{{FECHA}}` («sábado 5 de diciembre» o «Por confirmar») · `{{HORA}}` («2:00 p. m.» o «Por confirmar») · `{{FECHA_HORA}}` · `{{FECHA_ISO}}` · `{{FECHA_ESTADO}}` (`pendiente`/`confirmada`) · `{{LUGAR}}` · `{{API_URL}}` (vacío si aún es la de ejemplo) · `{{TOTAL_ARTICULOS}}` · `{{VERSION}}` · `{{{CATEGORIAS}}}` · `{{{CATALOGO_JSON}}}` = `{{{ARTICULOS_JSON}}}` (JSON seguro para `<script type="application/json">`) |
+| `site/index.html` | `{{EVENTO}}` (nombre de la carnita) · `{{FECHA}}` («sábado 5 de diciembre» o «Por confirmar») · `{{HORA}}` («2:00 p. m.» o «Por confirmar») · `{{FECHA_HORA}}` · `{{FECHA_ISO}}` · `{{FECHA_ESTADO}}` (`pendiente`/`confirmada`) · `{{LUGAR}}` · `{{API_URL}}` (vacío si aún es la de ejemplo) · `{{TOTAL_ARTICULOS}}` · `{{VERSION}}` · `{{{CATEGORIAS}}}` · `{{{CATALOGO_JSON}}}` = `{{{ARTICULOS_JSON}}}` (JSON seguro para `<script type="application/json">`) |
+| `site/inicio.html` | `{{API_URL}}` · `{{TOTAL_ARTICULOS}}` · `{{VERSION}}` · `{{{EVENTOS}}}` (una tarjeta por carnita) |
+| `site/partes/evento.html` | `{{slug}}` · `{{nombre}}` · `{{fecha_hora}}` · `{{lugar}}` |
 | `site/partes/categoria.html` | `{{cat}}` · `{{cat_id}}` (slug ascii) · `{{kanji}}` (de `site/partes/categorias.json`) · `{{n}}` · `{{n_texto}}` · `{{{ARTICULOS}}}` |
 | `site/partes/articulo.html` | `{{id}}` · `{{n}}` · `{{cat}}` · `{{cat_id}}` · `{{que}}` · `{{producto}}` · `{{aviso}}` ('' si no hay) · `{{tienda}}` · `{{url}}` · `{{imagen}}` (usa `site/img/<id>.{webp,avif,jpg,jpeg,png}` si existe) · `{{precio}}` («₡2 800» o «₡400 c/u · ₡1 600 en total») · `{{precio_crc}}` · `{{cantidad}}` |
 

@@ -245,6 +245,15 @@ h2 { font-family: var(--f-display); font-size: 24px; line-height: 1.25; margin: 
 
 .pie { padding-top: 36px; color: var(--texto-suave); font-size: 14px; }
 
+/* Portada: una tarjeta por carnita. */
+.eventos { list-style: none; margin: 0; padding: 24px 0 0; display: grid; grid-gap: 12px; gap: 12px; }
+.evento-enlace { display: grid; grid-gap: 4px; gap: 4px; padding: 16px; min-height: var(--toque); border: 1px solid var(--borde-fuerte); border-radius: var(--radio); background: var(--superficie); color: var(--texto); text-decoration: none; }
+.evento-enlace:hover .evento-ir { text-decoration: underline; }
+.evento-enlace:focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+.evento-nombre { font-family: var(--f-display); font-weight: 700; font-size: 21px; }
+.evento-dato { font-size: 15px; color: var(--texto-suave); }
+.evento-ir { margin-top: 6px; font-size: 15px; font-weight: 700; }
+
 /* Movimiento: solo si la persona no pidió reducirlo. */
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
