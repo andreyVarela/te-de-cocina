@@ -80,6 +80,7 @@ h1 { font-family: var(--f-display); font-weight: 800; font-size: 34px; font-size
 h2 { font-family: var(--f-display); font-size: 24px; line-height: 1.25; margin: 0; }
 @media (min-width: 600px) { h2 { font-size: 26px; } }
 .lead { font-size: 18px; max-width: 46ch; margin: 0; color: var(--texto-suave); }
+.aviso-whatsapp { margin: 0; font-size: 16px; color: var(--texto); max-width: 46ch; }
 .nota { font-size: 14px; color: var(--texto-suave); margin: 0; max-width: 60ch; }
 
 .datos { margin: 8px 0 0; border: 1px solid var(--borde); background: var(--superficie); }
@@ -207,6 +208,8 @@ h2 { font-family: var(--f-display); font-size: 24px; line-height: 1.25; margin: 
 .panel { margin-top: 10px; padding: 14px; background: var(--superficie); border: 1px solid var(--borde-fuerte); border-radius: var(--radio); }
 .panel-titulo { margin: 0; font-family: var(--f-display); font-size: 18px; font-weight: 700; line-height: 1.3; }
 .panel-ayuda { margin: 4px 0 0; font-size: 14px; color: var(--texto-suave); }
+.panel-privado { margin: 8px 0 0; font-size: 14px; display: flex; align-items: flex-start; }
+.panel-privado > [aria-hidden] { flex: 0 0 auto; font-weight: 800; color: var(--acento); margin-right: 8px; }
 .campo { margin-top: 12px; }
 .campo label { display: block; font-weight: 700; font-size: 15px; margin-bottom: 4px; }
 .campo input {

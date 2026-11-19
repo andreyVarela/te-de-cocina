@@ -65,7 +65,6 @@
   var barra = document.getElementById('barra');
   var barraTexto = document.getElementById('barra-texto');
   var barraRecargar = document.getElementById('barra-recargar');
-  var avisoDispositivo = document.getElementById('aviso-dispositivo');
   var listaVacia = document.getElementById('lista-vacia');
   var avisoConexion = document.getElementById('aviso-conexion');
 
@@ -76,10 +75,13 @@
   var articulos = [];                 // en orden del HTML
   var porId = {};
 
-  /* ---------- Fecha «Por confirmar» atenuada (solo estética) ---------- */
+  /* ---------- Fecha «Por confirmar» atenuada; si ya hay fecha, la línea de WhatsApp solo habla de la dirección ---------- */
+  var fechaPendiente = false;
   Array.prototype.forEach.call(document.querySelectorAll('[data-dato]'), function (dd) {
-    if (/por confirmar/i.test(dd.textContent)) dd.className += ' pendiente';
+    if (/por confirmar/i.test(dd.textContent)) { dd.className += ' pendiente'; fechaPendiente = true; }
   });
+  var lineaWhatsapp = document.getElementById('aviso-whatsapp');
+  if (lineaWhatsapp && !fechaPendiente) lineaWhatsapp.textContent = 'Te paso la dirección y los detalles por WhatsApp.';
 
   /* ---------- Fotos: recuadro con el nombre si la imagen falla ---------- */
   function sinFoto(img) {
@@ -95,7 +97,6 @@
     if (!src || src.indexOf('{{') !== -1 || (img.complete && img.naturalWidth === 0 && img.currentSrc)) sinFoto(img);
   });
 
-  if (!persistente) avisoDispositivo.hidden = false;
 
   /* ---------- Armar cada artículo ---------- */
   Array.prototype.forEach.call(document.querySelectorAll('.articulo[data-id]'), function (li) {
@@ -177,15 +178,22 @@
 
     vaciar(n.acciones);
     var describe = desactivado && global === 'error' ? 'barra-texto' : null;
+    // El servidor no deja que un mismo celular aparte y marque «parecido» en el mismo artículo
+    // (ya_registrado_distinto, apps-script/Logica.js): con algo mío solo ofrezco soltarlo.
     if (st && st.mio) {
-      n.acciones.appendChild(boton('Soltar', 'boton-secundario', ': ' + etiqueta(a), function () { abrirSoltar(a); }));
+      n.acciones.appendChild(boton(st.mio === 'parecido' ? 'Ya no llevo algo parecido' : 'Soltar mi apartado', 'boton-secundario',
+        (st.mio === 'parecido' ? ' a: ' : ': ') + etiqueta(a), function () { abrirSoltar(a); }));
     } else {
+      // Desactivado con aria-disabled (no `disabled`): sigue enfocable y al tocarlo explica por qué no responde.
+      var extra = { 'aria-disabled': desactivado ? 'true' : null, 'aria-describedby': describe };
       if (!st || !st.apartado_por) {
-        n.acciones.appendChild(boton('Apartar', 'boton-primario', ': ' + etiqueta(a), function () { abrirPanel(a, 'apartado'); },
-          { disabled: desactivado, 'aria-describedby': describe }));
+        n.acciones.appendChild(boton('Apartar', 'boton-primario', ': ' + etiqueta(a), function () {
+          if (desactivado) explicarDesactivado(a); else abrirPanel(a, 'apartado');
+        }, extra));
       }
-      n.acciones.appendChild(boton('Llevo algo parecido', 'boton-texto', ' a: ' + etiqueta(a), function () { abrirPanel(a, 'parecido'); },
-        { disabled: desactivado, 'aria-describedby': describe }));
+      n.acciones.appendChild(boton('Llevo algo parecido', 'boton-texto', ' a: ' + etiqueta(a), function () {
+        if (desactivado) explicarDesactivado(a); else abrirPanel(a, 'parecido');
+      }, extra));
     }
     n.acciones.hidden = !!a.panelAbierto;
   }
@@ -196,9 +204,10 @@
   function mensaje(a, tipo, lineas, acciones, enfocar) {
     var m = a.nodos.mensaje;
     vaciar(m);
+    m.removeAttribute('data-motivo');
     if (!lineas) { m.removeAttribute('data-tipo'); return; }
     m.setAttribute('data-tipo', tipo);
-    m.appendChild(simbolo(tipo === 'exito' ? '✓' : '!'));
+    m.appendChild(simbolo(tipo === 'exito' ? '✓' : tipo === 'espera' ? '…' : '!'));
     var cuerpo = el('div', { class: 'mensaje-cuerpo' });
     lineas.forEach(function (t) { cuerpo.appendChild(el('p', { text: t })); });
     if (acciones && acciones.length) cuerpo.appendChild(el('div', { class: 'acciones' }, acciones));
@@ -233,6 +242,17 @@
           : 'Ya marcaste este como «parecido». Suéltalo primero si quieres apartarlo.';
       default: return 'Algo falló y no se guardó. Intenta de nuevo; si sigue, escríbeme por WhatsApp.';
     }
+  }
+  /* Botón desactivado tocado: decir por qué en la fila, con salida. */
+  function explicarDesactivado(a) {
+    if (!a.activo) { mensaje(a, 'error', ['Este ya no se puede apartar.'], null, true); return; }
+    if (global === 'error') {
+      mensaje(a, 'error', ['Sin conexión: no se puede apartar ahora. Puedes reintentar en un momento.'],
+        [boton('Reintentar', 'boton-primario', null, function () { cargar(false); })], true);
+    } else {
+      mensaje(a, 'espera', ['Cargando lo apartado; espera un momento.'], null, true);
+    }
+    a.nodos.mensaje.setAttribute('data-motivo', 'conexion');
   }
   function textoNombre(motivo) {
     return motivo === 'caracteres' ? 'Tu nombre necesita letras (sin símbolos raros)' : 'Escribe tu nombre (2 a 40 letras)';
@@ -283,13 +303,17 @@
       aviso.appendChild(cuerpo);
     }
 
+    var titulo = el('p', { class: 'panel-titulo', id: 'pt-' + a.id, text: (tipo === 'apartado' ? 'Apartar: ' : 'Llevo algo parecido a: ') + etiqueta(a) });
     var form = el('form', { class: 'panel', novalidate: true, 'aria-labelledby': 'pt-' + a.id }, [
-      el('p', { class: 'panel-titulo', id: 'pt-' + a.id, text: (tipo === 'apartado' ? 'Apartar: ' : 'Llevo algo parecido a: ') + etiqueta(a) }),
+      titulo,
       el('p', {
         class: 'panel-ayuda', text: tipo === 'apartado'
           ? 'Solo tu nombre, nada más. Los demás verán solo tu primer nombre.'
           : 'No reserva nada: es para que yo sepa. Los demás verán solo tu primer nombre.'
       }),
+      persistente ? null : el('p', { class: 'panel-privado' }, [el('span', { 'aria-hidden': 'true', text: '!' }),
+        'Este navegador no guarda datos (puede ser modo privado). Puedes ' + (tipo === 'apartado' ? 'apartar' : 'marcarlo') +
+        ' igual, pero para soltarlo después tendrás que avisarme por WhatsApp.']),
       el('div', { class: 'campo' }, [
         el('label', { for: idCampo, text: 'Tu nombre' }),
         input,
@@ -344,6 +368,7 @@
             a.estado.apartado_por = por;
             pintar(a);
             enviar.hidden = true;
+            titulo.textContent = 'Ya lo apartó alguien';
             avisar('conflicto', [por + ' acaba de apartar este. Puedes elegir otro o marcar «Llevo algo parecido».'], [
               boton('Marcar «Llevo algo parecido»', 'boton-primario', null, function () { abrirPanel(a, 'parecido', input.value); })
             ]);
@@ -384,7 +409,8 @@
     abierto = a;
     a.panelAbierto = 'soltar';
     var esParecido = a.estado && a.estado.mio === 'parecido';
-    var si = el('button', { type: 'button', class: 'boton boton-primario', text: 'Sí, soltar' });
+    var textoSi = esParecido ? 'Sí, ya no lo llevo' : 'Sí, soltar';
+    var si = el('button', { type: 'button', class: 'boton boton-primario', text: textoSi });
     var no = boton('No', 'boton-texto', null, function () { cerrarPanel(a, true); });
     var aviso = el('div', { class: 'mensaje', role: 'status', tabindex: '-1' });
     var panel = el('div', { class: 'panel', role: 'group', 'aria-labelledby': 'ps-' + a.id }, [
@@ -406,7 +432,7 @@
       aviso.appendChild(el('div', { class: 'mensaje-cuerpo' }, [el('p', { text: 'Soltando ' + etiqueta(a) + '… Puede tardar unos segundos.' })]));
       api.soltar(a.id).then(function (r) {
         a.ocupado = false;
-        si.disabled = false; si.removeAttribute('aria-busy'); si.textContent = 'Sí, soltar'; no.disabled = false;
+        si.disabled = false; si.removeAttribute('aria-busy'); si.textContent = textoSi; no.disabled = false;
         vaciar(aviso); aviso.removeAttribute('data-tipo');
         if (r.ok) {
           a.estado = { apartado_por: r.estado ? r.estado.apartado_por : null, parecidos: r.estado ? r.estado.parecidos || [] : [], mio: null };
@@ -478,6 +504,7 @@
           a.estado = { apartado_por: x.apartado_por || null, parecidos: Array.isArray(x.parecidos) ? x.parecidos : [], mio: x.mio || null };
         });
         articulos.forEach(function (a) { if (!vistos[a.id]) a.activo = false; });
+        articulos.forEach(function (a) { if (a.nodos.mensaje.getAttribute('data-motivo') === 'conexion') { mensaje(a, null, null); a.nodos.mensaje.removeAttribute('data-motivo'); } });
         global = 'listo';
         ultimaCarga = Date.now();
         pintarTodo();
