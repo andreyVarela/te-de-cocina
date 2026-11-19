@@ -12,6 +12,8 @@ const RAIZ = new URL('..', import.meta.url);
 execFileSync(process.execPath, ['scripts/build.mjs', '--solo-code'], { cwd: RAIZ, stdio: 'pipe' });
 const CODE = readFileSync(new URL('apps-script/Code.gs', RAIZ), 'utf8');
 const CATALOGO = JSON.parse(readFileSync(new URL('catalogo.json', RAIZ), 'utf8'));
+// Un artículo real cualquiera (el segundo), para no atar las pruebas a lo que tenga el catálogo hoy.
+const ART = CATALOGO[1].id;
 
 // ---------------------------------------------------------------- dobles de Google
 
@@ -201,12 +203,12 @@ test('flujo completo: ver, apartar, repetido, carrera, soltar solo con mi token'
 
   const v0 = m.ver();
   assert.deepEqual(Object.keys(v0).sort(), ['articulos', 'generado_en', 'ok']);
-  assert.deepEqual(v0.articulos[0], { id: 'sarten-20', apartado_por: null, parecidos: [], mio: null });
+  assert.deepEqual(v0.articulos[0], { id: CATALOGO[0].id, apartado_por: null, parecidos: [], mio: null });
 
-  const a = m.post(apartar('licuadora', '  María   José Vargas ', t1));
+  const a = m.post(apartar(ART, '  María   José Vargas ', t1));
   assert.equal(a.ok, true);
   assert.deepEqual(a, {
-    ok: true, articulo_id: 'licuadora', tipo: 'apartado', nombre: 'María José Vargas', nombre_pila: 'María',
+    ok: true, articulo_id: ART, tipo: 'apartado', nombre: 'María José Vargas', nombre_pila: 'María',
     repetido: false, primero_en_dispositivo: true, estado: { apartado_por: 'María', parecidos: [] },
   });
   const [fila] = m.tabla('registros');
@@ -216,31 +218,31 @@ test('flujo completo: ver, apartar, repetido, carrera, soltar solo con mi token'
   assert.ok(fila.creado instanceof Date || Object.prototype.toString.call(fila.creado) === '[object Date]');
   assert.ok(!JSON.stringify(m.hojas.get('registros').d).includes(t1), 'el token nunca se guarda');
 
-  assert.equal(m.post(apartar('licuadora', 'María José Vargas', t1)).repetido, true);
+  assert.equal(m.post(apartar(ART, 'María José Vargas', t1)).repetido, true);
   assert.equal(m.tabla('registros').length, 1);
 
-  const carrera = m.post(apartar('licuadora', 'Luis', t2));
+  const carrera = m.post(apartar(ART, 'Luis', t2));
   assert.equal(carrera.codigo, 'ya_apartado');
   assert.deepEqual(carrera.datos, { por: 'María' });
 
-  const parecido = m.post(apartar('licuadora', 'Luis Mora', t2, 'parecido'));
+  const parecido = m.post(apartar(ART, 'Luis Mora', t2, 'parecido'));
   assert.deepEqual(parecido.estado, { apartado_por: 'María', parecidos: ['Luis'] });
 
   // ver refleja lo escrito (caché invalidada) y `mio` depende del token.
-  const lic = (v) => v.articulos.find((x) => x.id === 'licuadora');
-  assert.deepEqual(lic(m.ver(t1)), { id: 'licuadora', apartado_por: 'María', parecidos: ['Luis'], mio: 'apartado' });
+  const lic = (v) => v.articulos.find((x) => x.id === ART);
+  assert.deepEqual(lic(m.ver(t1)), { id: ART, apartado_por: 'María', parecidos: ['Luis'], mio: 'apartado' });
   assert.equal(lic(m.ver(t2)).mio, 'parecido');
   assert.equal(lic(m.ver('no-es-token')).mio, null);
   assert.ok(!JSON.stringify(m.ver(t1)).includes('Vargas'));
 
   // Otro token no suelta lo mío.
-  assert.deepEqual(m.post({ accion: 'soltar', articulo_id: 'licuadora', token: tok() }),
+  assert.deepEqual(m.post({ accion: 'soltar', articulo_id: ART, token: tok() }),
     { ok: true, liberado: false, estado: { apartado_por: 'María', parecidos: ['Luis'] } });
-  const s = m.post({ accion: 'soltar', articulo_id: 'licuadora', token: t1 });
+  const s = m.post({ accion: 'soltar', articulo_id: ART, token: t1 });
   assert.deepEqual(s, { ok: true, liberado: true, estado: { apartado_por: null, parecidos: ['Luis'] } });
   assert.equal(m.tabla('registros')[0].estado, 'liberado');
   assert.ok(m.tabla('registros')[0].liberado);
-  assert.equal(m.post({ accion: 'soltar', articulo_id: 'licuadora', token: t1 }).liberado, false);
+  assert.equal(m.post({ accion: 'soltar', articulo_id: ART, token: t1 }).liberado, false);
   assert.equal(m.estado.escriturasFueraDeLock, 0, 'nunca se escribe registros fuera del lock');
 });
 
@@ -248,7 +250,7 @@ test('lock ocupado → demasiadas_solicitudes{ocupado} y no se escribe nada', ()
   const m = crearMundo();
   m.setup();
   m.estado.lockOcupado = true;
-  const r = m.post(apartar('licuadora', 'Ana', tok()));
+  const r = m.post(apartar(ART, 'Ana', tok()));
   assert.equal(r.codigo, 'demasiadas_solicitudes');
   assert.deepEqual(r.datos, { motivo: 'ocupado', reintentar_en_s: 3 });
   assert.equal(m.tabla('registros').length, 0);
@@ -271,7 +273,7 @@ test('frecuencia: la 7.ª escritura del mismo dispositivo en un minuto se rechaz
 test('nombres con =, +, - o @ se guardan como texto, no como fórmula', () => {
   const m = crearMundo();
   m.setup();
-  m.post(apartar('licuadora', '=IMPORTXML("http://x";"//a")', tok()));
+  m.post(apartar(ART, '=IMPORTXML("http://x";"//a")', tok()));
   assert.equal(m.tabla('registros')[0].nombre, '\'=IMPORTXML("http://x";"//a")');
 });
 
@@ -288,8 +290,8 @@ test('columnas reordenadas por Andrey: el script escribe por encabezado', () => 
   assert.equal(f.hash_token, sha(t));
   assert.equal(f['nota de Andrey'], '');
   // Fila a mano de Andrey, sin estado ni hash: cuenta como activa.
-  h.d.push(['', 'Tía Rosa Vargas', '', 'licuadora', 'apartado', '', '', '', 'admin']);
-  const lic = m.ver().articulos.find((x) => x.id === 'licuadora');
+  h.d.push(['', 'Tía Rosa Vargas', '', ART, 'apartado', '', '', '', 'admin']);
+  const lic = m.ver().articulos.find((x) => x.id === ART);
   assert.equal(lic.apartado_por, 'Tía');
 });
 
@@ -302,9 +304,9 @@ test('entradas inválidas y errores internos usan el sobre sin filtrar detalles'
   assert.equal(m.post('no es json').codigo, 'entrada_invalida');
   assert.equal(m.post('[1,2]').codigo, 'entrada_invalida');
   assert.equal(m.post('x'.repeat(5000)).codigo, 'entrada_invalida');
-  assert.equal(m.post({ accion: 'apartar', articulo_id: 'licuadora' }).codigo, 'entrada_invalida');
-  assert.equal(m.post(apartar('licuadora', 'A', tok())).codigo, 'nombre_invalido');
-  assert.equal(m.post(apartar('licuadora', 'Ana', 'abc')).codigo, 'token_invalido');
+  assert.equal(m.post({ accion: 'apartar', articulo_id: ART }).codigo, 'entrada_invalida');
+  assert.equal(m.post(apartar(ART, 'A', tok())).codigo, 'nombre_invalido');
+  assert.equal(m.post(apartar(ART, 'Ana', 'abc')).codigo, 'token_invalido');
   m.hojas.delete('registros');
   const r = m.ver();
   assert.deepEqual(Object.keys(r).sort(), ['codigo', 'datos', 'mensaje', 'ok']);
