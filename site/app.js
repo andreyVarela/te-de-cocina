@@ -99,7 +99,7 @@
 
 
   /* ---------- Armar cada artículo ---------- */
-  Array.prototype.forEach.call(document.querySelectorAll('.articulo[data-id]'), function (li) {
+  function prepararArticulo(li) {
     var queNodo = li.querySelector('.que');
     var a = {
       id: li.getAttribute('data-id'),
@@ -124,12 +124,137 @@
     articulos.push(a);
     porId[a.id] = a;
     pintar(a);
-  });
+    return a;
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.articulo[data-id]'), prepararArticulo);
 
-  if (!articulos.length) {
-    listaVacia.hidden = false;
-    barra.hidden = true;
-    return;
+  /* ---------- Vitrina desde la hoja ----------
+     La pestaña «articulos» de la hoja es el panel de Andrey: `ver` trae el catálogo (`catalogo`) y aquí
+     se dibuja igual que site/partes/articulo.html y categoria.html. Lo que trae el HTML es el respaldo
+     mientras carga o si no hay conexión. Todo texto entra por textContent; enlaces y fotos, solo https. */
+  var seccionLista = document.getElementById('lista');
+  var pieLista = seccionLista ? seccionLista.querySelector('.lista-pie') : null;
+  var kanji = (function () {
+    var n = document.getElementById('tdc-kanji');
+    try { return n ? JSON.parse(n.textContent) || {} : {}; } catch (e) { return {}; }
+  })();
+  function slugCat(t) {
+    var s = String(t);
+    if (s.normalize) s = s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+    return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'otros';
+  }
+  function urlSegura(u) { return typeof u === 'string' && /^https:\/\/[^\s"'<>]+$/i.test(u) ? u : ''; }
+  function colones(n) { return '₡' + String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+  function textoPrecio(precio, cantidad) {
+    if (!precio) return 'Sin precio';
+    return cantidad > 1 ? colones(precio) + ' c/u · ' + colones(precio * cantidad) + ' en total' : colones(precio);
+  }
+  function textoCantidad(n) { return n + (n === 1 ? ' artículo' : ' artículos'); }
+
+  function crearTarjeta(x) {
+    return el('li', { class: 'articulo', id: 'a-' + x.id, 'data-id': x.id }, [
+      el('div', { class: 'foto' }, [
+        el('span', { class: 'foto-texto' }),
+        el('img', { alt: '', width: '112', height: '112', loading: 'lazy', decoding: 'async', referrerpolicy: 'no-referrer' })
+      ]),
+      el('div', { class: 'cuerpo' }, [
+        el('h4', { class: 'que' }),
+        el('p', { class: 'producto' }),
+        el('p', { class: 'precio' }),
+        el('p', { class: 'aviso' }),
+        el('p', { class: 'tienda' })
+      ]),
+      el('div', { class: 'interaccion', 'data-js': true })
+    ]);
+  }
+  function ponerTexto(li, sel, t) { var n = li.querySelector(sel); if (n && n.textContent !== t) n.textContent = t; }
+  function actualizarTarjeta(li, x) {
+    ponerTexto(li, '.que', x.que);
+    ponerTexto(li, '.foto-texto', x.que);
+    ponerTexto(li, '.producto', x.producto || '');
+    ponerTexto(li, '.precio', textoPrecio(x.precio_crc, x.cantidad || 1));
+    ponerTexto(li, '.aviso', x.aviso || '');
+    var foto = li.querySelector('.foto');
+    var img = foto && foto.querySelector('img');
+    var src = urlSegura(x.imagen);
+    if (img && (img.getAttribute('src') || '') !== src) {
+      foto.className = 'foto';
+      if (src) img.setAttribute('src', src); else img.removeAttribute('src');
+    }
+    if (img && !src) sinFoto(img);
+    var tienda = li.querySelector('.tienda');
+    var url = urlSegura(x.url);
+    var nombreTienda = x.tienda || '';
+    var enlace = tienda && tienda.querySelector('a');
+    var textoEnlace = nombreTienda ? 'Ver en ' + nombreTienda : 'Ver referencia';
+    if (tienda && (!enlace ? url : enlace.getAttribute('href') !== url || enlace.firstChild.nodeValue !== textoEnlace)) {
+      vaciar(tienda);
+      if (url) {
+        tienda.appendChild(el('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, [
+          textoEnlace,
+          el('span', { class: 'sr', text: ' (se abre en otra pestaña)' }), ' ',
+          el('span', { 'aria-hidden': 'true', text: '↗' })
+        ]));
+      }
+    }
+  }
+  function seccionDe(cat) {
+    var id = 'cat-' + slugCat(cat);
+    var h3 = document.getElementById(id);
+    var sec = h3 && h3.parentNode;
+    if (!sec) {
+      h3 = el('h3', { id: id }, [el('span', { class: 'kanji', lang: 'ja', 'aria-hidden': 'true', text: kanji[cat] || '' }), cat,
+        el('span', { class: 'n' })]);
+      sec = el('section', { class: 'cat', 'aria-labelledby': id }, [h3, el('ul', { class: 'articulos' })]);
+    }
+    return { sec: sec, ul: sec.querySelector('.articulos'), n: h3.querySelector('.n') };
+  }
+  /* Mueve un nodo solo si no está ya en su lugar (moverlo le quitaría el foco a quien está escribiendo). */
+  function colocar(padre, nodo, antesDe) {
+    if (antesDe === nodo || (nodo.parentNode === padre && nodo.nextSibling === (antesDe || null))) return;
+    padre.insertBefore(nodo, antesDe || null);
+  }
+  function aplicarCatalogo(catalogo) {
+    if (!seccionLista || !Array.isArray(catalogo)) return;
+    var grupos = [];
+    var porCat = {};
+    var vistos = {};
+    catalogo.forEach(function (x) {
+      if (!x || typeof x.id !== 'string' || !x.id || vistos[x.id] || typeof x.que !== 'string' || !x.que) return;
+      vistos[x.id] = true;
+      var cat = typeof x.cat === 'string' && x.cat ? x.cat : 'Otros';
+      if (!porCat[cat]) { porCat[cat] = { cat: cat, items: [] }; grupos.push(porCat[cat]); }
+      porCat[cat].items.push(x);
+    });
+    var orden = [];
+    var secAnterior = null;
+    grupos.forEach(function (g) {
+      var s = seccionDe(g.cat);
+      colocar(seccionLista, s.sec, secAnterior ? secAnterior.nextSibling : (seccionLista.querySelector('.cat') || pieLista));
+      secAnterior = s.sec;
+      var liAnterior = null;
+      g.items.forEach(function (x) {
+        var a = porId[x.id] || prepararArticulo(crearTarjeta(x));
+        actualizarTarjeta(a.li, x);
+        a.que = x.que;
+        colocar(s.ul, a.li, liAnterior ? liAnterior.nextSibling : s.ul.firstChild);
+        liAnterior = a.li;
+        orden.push(a);
+      });
+    });
+    articulos.forEach(function (a) {
+      if (vistos[a.id]) return;
+      if (a.li.parentNode) a.li.parentNode.removeChild(a.li);
+      delete porId[a.id];
+    });
+    articulos = orden;
+    Array.prototype.forEach.call(seccionLista.querySelectorAll('.cat'), function (sec) {
+      var ul = sec.querySelector('.articulos');
+      if (!ul || !ul.children.length) { sec.parentNode.removeChild(sec); return; }
+      var n = sec.querySelector('.n');
+      if (n) n.textContent = textoCantidad(ul.children.length);
+    });
+    listaVacia.hidden = articulos.length > 0;
   }
 
   /* ---------- Textos ---------- */
@@ -495,6 +620,7 @@
       cargando = false;
       barraRecargar.disabled = false;
       if (r.ok && Array.isArray(r.articulos)) {
+        aplicarCatalogo(r.catalogo);
         var vistos = {};
         r.articulos.forEach(function (x) {
           vistos[x.id] = true;

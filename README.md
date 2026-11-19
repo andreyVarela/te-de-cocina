@@ -11,7 +11,8 @@ Hay una página por carnita, todas con la **misma lista** (lo que se aparta en u
 
 - **Página:** GitHub Pages (se publica sola al llegar algo a `main`).
 - **Datos:** una hoja de Google tuya, `te-de-cocina`, con un script pegado (Apps Script).
-- **Lo único que editas a mano:** `evento.json` (fecha, hora y lugar de cada carnita, y la URL del script).
+- **La lista de regalos:** la cambias tú en la pestaña `articulos` de la hoja (sección 5).
+- **Fechas:** `evento.json` (fecha, hora y lugar de cada carnita, y la URL del script).
 
 ---
 
@@ -63,15 +64,43 @@ Hay una página por carnita, todas con la **misma lista** (lo que se aparta en u
 
 Abre la hoja (sirve la app de Sheets en el celular) → pestaña **`resumen`**:
 
-- Arriba: «Apartados: X de 36 · Parecidos: Y».
-- Una fila por artículo: **Apartado por** (nombre completo), **Parecidos** y **Alerta**
-  («Duplicado: libera uno en registros», en texto y en rojo).
-- Debajo: filas con un `id_articulo` que no existe (si escribiste uno mal) y la **bitácora**
-  con fecha y hora, lo último primero.
+- Arriba: «Apartados: X de N · Parecidos: Y» y las filas de `registros` con un `id_articulo` que no
+  existe (si escribiste uno mal).
+- Una fila por artículo visible: **Apartado por** (nombre completo), **Parecidos** y **Alerta**
+  («Duplicado: libera uno en registros», en texto y en rojo). Se actualiza sola cuando cambias la
+  lista en `articulos`.
+- A la derecha (columna H): la **bitácora** con fecha y hora, lo último primero.
 
 `resumen` es de solo lectura. Las correcciones se hacen en **`registros`**.
 
-## 5. Corregir cosas (pestaña `registros`)
+## 5. Cambiar la lista (pestaña `articulos`): tu panel
+
+La lista de regalos vive en la pestaña **`articulos`**. Lo que cambies ahí se ve en las dos páginas
+en unos segundos (el invitado recarga). No hace falta GitHub ni volver a correr nada.
+
+Una fila = un regalo, en el orden en que sale en la página (mueve filas para reordenar).
+
+| Columna | Qué va |
+|---|---|
+| `id` | **Se llena solo** cuando escribes `que` en una fila nueva. No lo cambies después: los apartados están ligados a él. |
+| `cat` | Categoría: Cocina, Mesa, Asado, Limpieza, Baño, Casa, Despensa… Una nueva sale como sección nueva. Vacía = «Otros». |
+| `que` | El nombre que ven los invitados (ej. «Sartén de hierro»). **Obligatorio**: sin esto la fila no sale. |
+| `producto` | El producto de referencia (ej. «Sartén hierro fundido 26 cm»). |
+| `tienda` | Ej. Novex. Sale como «Ver en Novex». |
+| `url` | Link al producto. Tiene que empezar con `https://`. |
+| `imagen` | Link directo a la foto (clic derecho en la foto → «Copiar dirección de imagen»). `https://`. Sin foto sale un recuadro con el nombre. |
+| `precio_crc` | Precio en colones, solo el número (2800). Vacío = «Sin precio». |
+| `cantidad` | Cuántas unidades (el precio es por unidad). Vacío = 1. |
+| `aviso` | Nota corta que sale en negrita (ej. «Medí la ventana antes»). |
+| `activo` | `si` = se ve · `no` = se esconde. |
+
+- **Agregar:** escribe en la primera fila vacía al final (o inserta una fila donde lo quieras ver).
+  Con poner `que` ya sale; lo demás es opcional.
+- **Quitar:** pon `activo` = **no**. **No borres la fila**: si alguien ya lo había apartado, perderías
+  el rastro (y `setup` la volvería a crear si venía del catálogo original).
+- **Editar:** cambia el texto, la foto, el precio o el link en su celda.
+
+## 6. Corregir cosas (pestaña `registros`)
 
 Los cambios se ven en la página en unos 5 segundos (el invitado recarga).
 
@@ -85,23 +114,23 @@ Los cambios se ven en la página en unos 5 segundos (el invitado recarga).
 | Me salió «Duplicado» | Hay dos apartados activos del mismo artículo: libera el que sobre. La página muestra el de más arriba. |
 
 Reglas para no romper nada: no cambies los **nombres** de los encabezados (fila 1). Puedes
-mover columnas, ensancharlas o agregar las tuyas. No edites `articulos` (la escribe `setup`).
+mover columnas, ensancharlas o agregar las tuyas, en `registros` y en `articulos`.
 
-## 6. Actualizar el script sin cambiar la URL
+## 7. Actualizar el script sin cambiar la URL
 
-Cuando cambie `apps-script/Code.gs` (por un arreglo o porque cambió el catálogo):
+Solo cuando cambie el código (`apps-script/Logica.js` o `Servidor.js`). Para cambiar la lista **no**
+hace falta: eso es la pestaña `articulos`.
 
-1. Copia el `Code.gs` nuevo (del repo, o si editaste el catálogo desde la web: **Actions** → la
-   última ejecución → **Artifacts → Code.gs**).
+1. Copia el `Code.gs` nuevo del repo.
 2. Apps Script → borra todo `Código.gs` → pega → guarda.
-3. Si cambió el catálogo: elige `setup` → **Ejecutar** (no borra registros; lo que sacaste del
-   catálogo queda `activo = no`).
+3. Elige `setup` → **Ejecutar**. No borra registros ni pisa lo que editaste en `articulos`: solo
+   agrega lo que falte de `catalogo.json` y rellena celdas vacías.
 4. **Implementar → Gestionar implementaciones** → lápiz → Versión: **Nueva versión** →
    **Implementar**. La URL sigue igual.
 
 **No** uses «Nueva implementación» para actualizar: eso crea otra URL y habría que cambiar `api_url`.
 
-## 7. Después del evento
+## 8. Después del evento
 
 Implementar → Gestionar implementaciones → **Archivar**. La página deja de aceptar apartados y la
 hoja queda como recuerdo y lista de agradecimientos.

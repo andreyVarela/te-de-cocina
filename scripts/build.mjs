@@ -256,11 +256,15 @@ function datosArticulo(a, i) {
   };
 }
 
+function leerKanji() {
+  const ruta = join(SITE, 'partes', 'categorias.json');
+  return existsSync(ruta) ? leerJson(ruta, 'site/partes/categorias.json') : {};
+}
+
 function htmlCategorias(articulos) {
   const parteCat = leerParte('categoria.html');
   const parteArt = leerParte('articulo.html');
-  const rutaKanji = join(SITE, 'partes', 'categorias.json');
-  const kanji = existsSync(rutaKanji) ? leerJson(rutaKanji, 'site/partes/categorias.json') : {};
+  const kanji = leerKanji();
   const grupos = new Map();
   for (const a of articulos) {
     if (!grupos.has(a.cat)) grupos.set(a.cat, []);
@@ -294,9 +298,10 @@ function generarCodeGs(catalogo) {
     fallo(`apps-script/Logica.js, línea ${prohibida + 1}: usa una API de Google. Logica.js debe ser pura; muévelo a Servidor.js.`);
   }
   cortarSiHayErrores();
-  // Solo lo que necesita el script: nunca nota, verificado, precios ni URLs.
-  const filas = catalogo.map((a, i) => `  ${JSON.stringify({
-    id: a.id, que: a.que, producto: a.producto, cantidad: a.cantidad ?? 1, orden: i + 1,
+  // Semilla de la pestaña «articulos» (setup() solo llena lo que falte). Nunca nota ni verificado.
+  const filas = catalogo.map((a) => `  ${JSON.stringify({
+    id: a.id, cat: a.cat, que: a.que, producto: a.producto, tienda: a.tienda, url: a.url, imagen: a.imagen || '',
+    precio_crc: a.precio_crc, cantidad: a.cantidad ?? 1, aviso: a.aviso || '',
   })}`);
   const codigo = `/** @OnlyCurrentDoc */
 // GENERADO por scripts/build.mjs: no editar a mano. Se edita apps-script/Logica.js,
@@ -368,6 +373,8 @@ function construirSitio(catalogo, evento, apiUrl) {
     CATEGORIAS: () => (categorias ??= htmlCategorias(articulos)),
     CATALOGO_JSON: catalogoJson,
     ARTICULOS_JSON: catalogoJson,  // alias
+    // Kanji por categoría: app.js los usa al dibujar categorías nuevas que Andrey agregue en la hoja.
+    KANJI_JSON: () => jsonParaScript(leerKanji()),
   };
   const datosDeEvento = (ev) => ({
     ...datosBase,

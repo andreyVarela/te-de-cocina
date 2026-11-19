@@ -69,6 +69,9 @@ function crearMundo() {
 
   class Rango {
     constructor(h, r, c, nr, nc) { Object.assign(this, { h, r, c, nr, nc }); }
+    getSheet() { return this.h; }
+    getRow() { return this.r; }
+    getLastRow() { return this.r + this.nr - 1; }
     getValues() {
       return Array.from({ length: this.nr }, (_, i) => Array.from({ length: this.nc }, (_, j) => this.h.leer(this.r + i, this.c + j)));
     }
@@ -151,28 +154,91 @@ const apartar = (articulo_id, nombre, token, tipo = 'apartado') => ({ accion: 'a
 
 // ---------------------------------------------------------------- pruebas
 
-test('setup() crea las tres pestañas, carga el catálogo y es idempotente', () => {
+const ENC_ARTICULOS = 'id,cat,que,producto,tienda,url,imagen,precio_crc,cantidad,aviso,activo';
+
+test('setup() crea las tres pestañas, siembra el catálogo completo y es idempotente', () => {
   const m = crearMundo();
   m.setup();
   assert.deepEqual([...m.hojas.keys()].sort(), ['articulos', 'registros', 'resumen']);
-  assert.equal(m.hojas.get('articulos').d[0].join(','), 'id,que,producto,cantidad,orden,activo');
+  assert.equal(m.hojas.get('articulos').d[0].join(','), ENC_ARTICULOS);
   assert.equal(m.hojas.get('registros').d[0].join(','), 'id_articulo,tipo,nombre,hash_token,creado,estado,liberado,origen');
-  let arts = m.tabla('articulos');
-  assert.equal(arts.length, CATALOGO.length);
-  assert.ok(arts.every((a) => a.activo === 'si'));
+  const arts = m.tabla('articulos');
   assert.deepEqual(arts.map((a) => a.id), CATALOGO.map((a) => a.id));
+  assert.ok(arts.every((a) => a.activo === 'si'));
+  assert.equal(arts[0].cat, CATALOGO[0].cat);
+  assert.equal(arts[0].url, CATALOGO[0].url);
+  assert.equal(arts[0].precio_crc, CATALOGO[0].precio_crc);
   assert.equal(m.hojas.get('resumen').d[0][0].startsWith('="Apartados: "'), true);
   assert.equal(m.ctx.SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(), 'America/Costa_Rica');
 
   m.setup();
   assert.equal(m.tabla('articulos').length, CATALOGO.length);
+});
 
-  runInContext('CATALOGO.pop()', m.ctx);  // quitar un artículo del JSON
+test('articulos es el panel de Andrey: setup() no pisa lo editado y onEdit pone el id de filas nuevas', () => {
+  const m = crearMundo();
   m.setup();
-  arts = m.tabla('articulos');
-  assert.equal(arts.length, CATALOGO.length);  // no se borra
-  assert.equal(arts.at(-1).activo, 'no');
-  assert.equal(m.ver().articulos.length, CATALOGO.length - 1);
+  const hoja = m.hojas.get('articulos');
+  const c = Object.fromEntries(hoja.d[0].map((h, i) => [h, i + 1]));
+  hoja.escribir(2, c.que, 'Olla grande negra');          // cambia un texto
+  hoja.escribir(2, c.url, '');                            // vacía una celda: setup la vuelve a sembrar
+  hoja.escribir(3, c.activo, 'no');                       // esconde uno
+  const fila = hoja.getLastRow() + 1;                     // agrega uno nuevo, solo con lo que él escribe
+  hoja.escribir(fila, c.cat, 'Casa');
+  hoja.escribir(fila, c.que, 'Sartén de hierro');
+  hoja.escribir(fila, c.url, 'https://tienda.cr/sarten');
+  hoja.escribir(fila, c.precio_crc, '₡12 500');
+  runInContext('onEdit', m.ctx)({ range: hoja.getRange(fila, c.que) });
+  assert.equal(hoja.leer(fila, c.id), 'sarten-de-hierro');
+  assert.equal(hoja.leer(fila, c.activo), 'si');
+  // Otro con el mismo nombre: id único.
+  hoja.escribir(fila + 1, c.que, 'Sartén de hierro');
+  runInContext('onEdit', m.ctx)({ range: hoja.getRange(fila + 1, c.que) });
+  assert.equal(hoja.leer(fila + 1, c.id), 'sarten-de-hierro-2');
+  // onEdit en otra pestaña no toca nada.
+  runInContext('onEdit', m.ctx)({ range: m.hojas.get('registros').getRange(1, 1) });
+
+  runInContext('CATALOGO.pop()', m.ctx);  // quitar del JSON ya no esconde nada: la hoja manda
+  m.setup();
+  const arts = m.tabla('articulos');
+  assert.equal(arts[0].que, 'Olla grande negra');
+  assert.equal(arts[0].url, CATALOGO[0].url);
+  assert.equal(arts[1].activo, 'no');
+  assert.ok(arts.some((a) => a.id === 'sarten-de-hierro'));
+
+  const v = m.ver();
+  const ids = v.catalogo.map((a) => a.id);
+  assert.deepEqual(v.articulos.map((a) => a.id), ids);
+  assert.ok(!ids.includes(CATALOGO[1].id), 'el escondido no sale');
+  const nuevo = v.catalogo.find((a) => a.id === 'sarten-de-hierro');
+  assert.deepEqual(nuevo, { id: 'sarten-de-hierro', cat: 'Casa', que: 'Sartén de hierro', producto: '', tienda: '',
+    url: 'https://tienda.cr/sarten', imagen: '', precio_crc: 12500, cantidad: 1, aviso: '' });
+  assert.equal(v.catalogo[0].que, 'Olla grande negra');
+  // Se puede apartar lo nuevo y no lo escondido.
+  assert.equal(m.post(apartar('sarten-de-hierro', 'Ana', tok())).ok, true);
+  assert.equal(m.post(apartar(CATALOGO[1].id, 'Ana', tok())).codigo, 'articulo_invalido');
+});
+
+test('setup() migra la pestaña vieja: ordena por `orden`, quita la columna y conserva datos y activo', () => {
+  const m = crearMundo();
+  const vieja = m.ctx.SpreadsheetApp.getActiveSpreadsheet().insertSheet('articulos');
+  const [a, b] = CATALOGO;
+  vieja.d = [
+    ['id', 'que', 'producto', 'cantidad', 'orden', 'activo', 'mi_nota'],
+    [b.id, 'Texto editado', b.producto, 1, 2, 'si', 'ojo'],
+    ['quitado', 'Viejo', 'x', 1, 3, 'no', ''],
+    [a.id, a.que, a.producto, 1, 1, 'si', ''],
+  ];
+  m.setup();
+  const hoja = m.hojas.get('articulos');
+  assert.equal(hoja.d[0].join(','), ENC_ARTICULOS + ',mi_nota');
+  const arts = m.tabla('articulos');
+  assert.deepEqual(arts.slice(0, 3).map((x) => x.id), [a.id, b.id, 'quitado']);
+  assert.equal(arts[1].que, 'Texto editado');
+  assert.equal(arts[1].mi_nota, 'ojo');
+  assert.equal(arts[2].activo, 'no');
+  assert.equal(arts[1].cat, b.cat, 'la migración siembra las columnas nuevas');
+  assert.equal(arts.length, CATALOGO.length + 1);
 });
 
 test('Code.gs limita el permiso a esta hoja y setup() no deja fórmulas desde el catálogo', () => {
@@ -190,7 +256,7 @@ test('setup() usa «,» si Sheets rechaza «;» y las fórmulas no traen restos 
   m.estado.rechazarPuntoYComa = true;
   m.setup();
   const formulas = m.hojas.get('resumen').d.flat().filter((v) => typeof v === 'string' && v.startsWith('='));
-  assert.ok(formulas.length > CATALOGO.length);
+  assert.ok(formulas.length >= 7);
   for (const f of formulas) assert.ok(!f.replace(/"[^"]*"/g, '').includes(';'), f);
 });
 
@@ -202,7 +268,7 @@ test('flujo completo: ver, apartar, repetido, carrera, soltar solo con mi token'
   const t2 = tok();
 
   const v0 = m.ver();
-  assert.deepEqual(Object.keys(v0).sort(), ['articulos', 'generado_en', 'ok']);
+  assert.deepEqual(Object.keys(v0).sort(), ['articulos', 'catalogo', 'generado_en', 'ok']);
   assert.deepEqual(v0.articulos[0], { id: CATALOGO[0].id, apartado_por: null, parecidos: [], mio: null });
 
   const a = m.post(apartar(ART, '  María   José Vargas ', t1));

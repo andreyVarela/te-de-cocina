@@ -4,6 +4,7 @@
 // ============================================================================================
 // Servidor.js · capa fina con APIs de Google (contrato §5, §6 y §8).
 // doGet → `ver` · doPost → `apartar` / `soltar` · setup() → prepara la hoja (idempotente).
+// onEdit (disparador simple) → en «articulos», pone el `id` de las filas nuevas que Andrey agrega.
 // Toda la decisión de negocio vive en Logica.js. Aquí: leer la hoja, lock, caché, escribir.
 // Solo usa SpreadsheetApp (la hoja ligada), LockService, CacheService, ContentService y Utilities.
 // `CATALOGO` lo agrega el build al generar Code.gs.
@@ -12,10 +13,13 @@
 var ZONA_HORARIA = 'America/Costa_Rica';
 var HOJA = Object.freeze({ ARTICULOS: 'articulos', REGISTROS: 'registros', RESUMEN: 'resumen' });
 var ENCABEZADOS = Object.freeze({
-  articulos: ['id', 'que', 'producto', 'cantidad', 'orden', 'activo'],
+  // «articulos» es el panel de Andrey: una fila por regalo, en el orden en que se ve en la página.
+  articulos: ['id', 'cat', 'que', 'producto', 'tienda', 'url', 'imagen', 'precio_crc', 'cantidad', 'aviso', 'activo'],
   registros: ['id_articulo', 'tipo', 'nombre', 'hash_token', 'creado', 'estado', 'liberado', 'origen'],
 });
 var MARCA_PROTECCION = 'tdc: ';
+// Celdas que setup() siembra desde CATALOGO solo si están vacías (nunca pisa lo que Andrey escribió).
+var CAMPOS_SEMILLA = ['cat', 'que', 'producto', 'tienda', 'url', 'imagen', 'precio_crc', 'cantidad', 'aviso'];
 
 // ------------------------------------------------------------------ entradas HTTP
 
@@ -243,11 +247,11 @@ function setup() {
 
   var articulos = prepararArticulos_(libro);
   var registros = prepararRegistros_(libro);
-  prepararResumen_(libro, articulos, registros);
+  prepararResumen_(libro, registros);
   invalidarVer_();
   SpreadsheetApp.flush();
 
-  var activos = articulos.filter(function (a) { return a.activo === 'si'; }).length;
+  var activos = articulos.filter(function (a) { return a.activo; }).length;
   var msg = 'Listo: ' + activos + ' artículos activos de ' + articulos.length + ' en «articulos». '
     + 'Pestañas «registros» y «resumen» listas. Zona horaria: ' + libro.getSpreadsheetTimeZone() + '.';
   console.log(msg);
@@ -289,13 +293,18 @@ function quitarProteccionesPropias_(libro) {
   });
 }
 
-/** Upsert de CATALOGO por `id`: actualiza textos, `activo = si`; lo que ya no está queda `activo = no`. */
+/**
+ * «articulos» es el panel de Andrey: la hoja manda. setup() solo siembra desde CATALOGO lo que falte
+ * (filas de ids nuevos y celdas vacías) y nunca pisa textos ni cambia `activo` de una fila que ya existe.
+ * Devuelve los artículos normalizados (Logica.normalizarArticulos), en el orden de la hoja.
+ */
 function prepararArticulos_(libro) {
-  if (typeof CATALOGO === 'undefined' || !CATALOGO.length) {
+  if (typeof CATALOGO === 'undefined') {
     throw new Error('Falta CATALOGO: pega apps-script/Code.gs completo (lo genera node scripts/build.mjs).');
   }
   quitarProteccionesPropias_(libro);
   var hoja = hojaO_(libro, HOJA.ARTICULOS);
+  migrarColumnaOrden_(hoja);
   var col = asegurarEncabezados_(hoja, ENCABEZADOS.articulos);
   var ancho = hoja.getLastColumn();
   var ultima = hoja.getLastRow();
@@ -303,47 +312,107 @@ function prepararArticulos_(libro) {
 
   var porId = {};
   datos.forEach(function (fila, i) {
-    var id = String(fila[col.id - 1]).trim().toLowerCase();
+    var id = clave_(fila[col.id - 1]);
     if (id && !(id in porId)) porId[id] = i;
   });
-  var enCatalogo = {};
   CATALOGO.forEach(function (a) {
-    enCatalogo[a.id] = true;
     var i = porId[a.id];
     if (i === undefined) {
       var nueva = [];
       for (var k = 0; k < ancho; k++) nueva.push('');
+      nueva[col.id - 1] = a.id;
+      nueva[col.activo - 1] = 'si';
       datos.push(nueva);
       i = datos.length - 1;
       porId[a.id] = i;
     }
     var f = datos[i];
-    f[col.id - 1] = a.id;
-    f[col.que - 1] = textoSeguroParaCelda(a.que);
-    f[col.producto - 1] = textoSeguroParaCelda(a.producto);
-    f[col.cantidad - 1] = a.cantidad;
-    f[col.orden - 1] = a.orden;
-    f[col.activo - 1] = 'si';
-  });
-  datos.forEach(function (f) {
-    var id = String(f[col.id - 1]).trim().toLowerCase();
-    if (id && !enCatalogo[id]) f[col.activo - 1] = 'no';
+    CAMPOS_SEMILLA.forEach(function (c) {
+      var v = a[c];
+      if (v === undefined || v === null || v === '' || texto_(f[col[c] - 1]) !== '') return;
+      f[col[c] - 1] = typeof v === 'string' ? textoSeguroParaCelda(v) : v;
+    });
   });
   if (datos.length) {
-    hoja.getRange(2, col.id, datos.length, 1).setNumberFormat('@');
+    ['id', 'url', 'imagen'].forEach(function (h) { hoja.getRange(2, col[h], datos.length, 1).setNumberFormat('@'); });
     hoja.getRange(2, 1, datos.length, ancho).setValues(datos);
   }
-  proteger_(hoja, 'la escribe setup() desde catalogo.json; no la edites a mano');
+  var regla = SpreadsheetApp.newDataValidation().requireValueInList(['si', 'no'], true).setAllowInvalid(true)
+    .setHelpText('si = se ve en la página · no = se esconde (no borres la fila)').build();
+  hoja.getRange(2, col.activo, Math.max(hoja.getMaxRows() - 1, 1), 1).setDataValidation(regla);
+  proteger_(hoja.getRange(1, 1, 1, hoja.getLastColumn()), 'encabezados: no los renombres (el script busca columnas por nombre)');
 
-  return datos.map(function (f) {
-    return {
-      id: String(f[col.id - 1]).trim().toLowerCase(),
-      que: String(f[col.que - 1]),
-      producto: String(f[col.producto - 1]),
-      orden: Number(f[col.orden - 1]),
-      activo: String(f[col.activo - 1]).trim().toLowerCase(),
-    };
-  }).sort(function (a, b) { return a.orden - b.orden; });
+  return normalizarArticulos(datos.map(function (f) {
+    var obj = {};
+    ENCABEZADOS.articulos.forEach(function (h) { obj[h] = f[col[h] - 1]; });
+    return obj;
+  }));
+}
+
+/**
+ * Migración única desde la versión con columna `orden`: ordena las filas por ella, la quita y deja las
+ * columnas en el orden del panel (las columnas propias de Andrey quedan al final).
+ */
+function migrarColumnaOrden_(hoja) {
+  var ancho = hoja.getLastColumn();
+  if (ancho < 1) return;
+  var valores = hoja.getRange(1, 1, Math.max(hoja.getLastRow(), 1), ancho).getValues();
+  var enc = valores[0].map(function (h) { return String(h).trim(); });
+  var iOrden = enc.indexOf('orden');
+  if (iOrden === -1) return;
+  var filas = valores.slice(1).map(function (f, i) {
+    var n = Number(f[iOrden]);
+    return { f: f, clave: texto_(f[iOrden]) !== '' && isFinite(n) ? n : 1e9 + i };
+  }).sort(function (a, b) { return a.clave - b.clave; });
+  var nuevos = ENCABEZADOS.articulos.concat(enc.filter(function (h) {
+    return h && h !== 'orden' && ENCABEZADOS.articulos.indexOf(h) === -1;
+  }));
+  var salida = [nuevos].concat(filas.map(function (x) {
+    return nuevos.map(function (h) { var k = enc.indexOf(h); return k === -1 ? '' : x.f[k]; });
+  }));
+  hoja.clear();
+  hoja.getRange(1, 1, salida.length, nuevos.length).setValues(salida);
+}
+
+// ------------------------------------------------------------------ onEdit: ids de filas nuevas
+
+/**
+ * Disparador simple: cuando Andrey escribe el nombre (`que`) de una fila nueva en «articulos», le pone
+ * un `id` fijo sacado del nombre (único) y `activo = si`. Así no tiene que inventarse ids; y como el id
+ * queda escrito, cambiar el nombre después no desconecta lo que ya se apartó.
+ */
+function onEdit(e) {
+  try {
+    var rango = e && e.range;
+    if (!rango || rango.getSheet().getName() !== HOJA.ARTICULOS || rango.getLastRow() < 2) return;
+    completarIds_(rango.getSheet(), Math.max(rango.getRow(), 2), rango.getLastRow());
+  } catch (err) {
+    console.warn('onEdit: no pude completar ids: ' + err);
+  }
+}
+
+function completarIds_(hoja, desde, hasta) {
+  var ancho = hoja.getLastColumn();
+  var ultima = hoja.getLastRow();
+  if (ultima < 2 || ancho < 1) return;
+  var valores = hoja.getRange(1, 1, ultima, ancho).getValues();
+  var enc = valores[0].map(function (h) { return String(h).trim(); });
+  var cId = enc.indexOf('id');
+  var cQue = enc.indexOf('que');
+  var cAct = enc.indexOf('activo');
+  if (cId === -1 || cQue === -1) return;
+  var usados = {};
+  valores.slice(1).forEach(function (f) { var id = clave_(f[cId]); if (id) usados[id] = true; });
+  for (var r = desde; r <= Math.min(hasta, ultima); r++) {
+    var f = valores[r - 1];
+    if (clave_(f[cId]) || !texto_(f[cQue])) continue;
+    var base = idDesdeTexto(f[cQue]) || 'articulo';
+    var id = base;
+    for (var n = 2; usados[id]; n++) id = base + '-' + n;
+    usados[id] = true;
+    hoja.getRange(r, cId + 1).setNumberFormat('@').setValue(id);
+    if (cAct !== -1 && !texto_(f[cAct])) hoja.getRange(r, cAct + 1).setValue('si');
+  }
 }
 
 function prepararRegistros_(libro) {
@@ -367,8 +436,12 @@ function prepararRegistros_(libro) {
   return col;
 }
 
-/** Reescribe por completo la pestaña `resumen` (solo lectura, todo con fórmulas). */
-function prepararResumen_(libro, articulos, colReg) {
+/**
+ * Reescribe por completo la pestaña `resumen` (solo lectura, todo con fórmulas). La lista de artículos
+ * sale de «articulos» con FILTER/MAP, así que se actualiza sola cuando Andrey agrega o esconde filas.
+ * Columnas A-F: un artículo por fila. A la derecha (H en adelante): la bitácora.
+ */
+function prepararResumen_(libro, colReg) {
   var hoja = hojaO_(libro, HOJA.RESUMEN);
   hoja.clear();
   hoja.clearConditionalFormatRules();
@@ -377,68 +450,57 @@ function prepararResumen_(libro, articulos, colReg) {
   var R = function (h) { var l = letraColumna(colReg[h]); return 'registros!$' + l + '$2:$' + l; };
   var A = function (h) { var l = letraColumna(colArt[h]); return 'articulos!$' + l + '$2:$' + l; };
   var activoReg = '((' + R('estado') + '="activo")+(' + R('estado') + '=""))';
-
-  var activos = articulos.filter(function (a) { return a.activo === 'si'; });
+  // Visible en la página: tiene id y nombre, y `activo` no dice «no» (ni FALSE).
+  var visible = '(' + A('id') + '<>"")*(' + A('que') + '<>"")*(LOWER(' + A('activo') + ')<>"no")*(LOWER(' + A('activo') + ')<>"false")';
   var primera = 5;
-  var ultima = primera + Math.max(activos.length, 1) - 1;
 
   // Separador: la hoja en español usa «;». Se prueba con la cabecera y, si da error de fórmula, «,».
-  var cabecera = '="Apartados: "&COUNTIF($D$' + primera + ':$D$' + ultima + ';"<>—")&" de "&COUNTIF('
-    + A('activo') + ';"si")&" · Parecidos: "&(COUNTIFS(' + R('tipo') + ';"parecido";' + R('estado') + ';"activo")+COUNTIFS('
+  var cabecera = '="Apartados: "&COUNTIFS($D$' + primera + ':$D;"<>—";$A$' + primera + ':$A;"<>")&" de "&SUMPRODUCT('
+    + visible + ')&" · Parecidos: "&(COUNTIFS(' + R('tipo') + ';"parecido";' + R('estado') + ';"activo")+COUNTIFS('
     + R('tipo') + ';"parecido";' + R('estado') + ';"";' + R('id_articulo') + ';"<>"))';
   var sep = elegirSeparador_(hoja.getRange('A1'), cabecera);
   var F = function (f) { return formulaConSeparador(f, sep); };
 
-  hoja.getRange('A2').setValue('Solo lectura: se calcula sola. Para corregir algo, edita la pestaña «registros».');
+  hoja.getRange('A2').setValue('Solo lectura: se calcula sola. Para corregir apartados edita «registros»; para la lista, «articulos».');
+  hoja.getRange('A3').setValue('Filas de «registros» con id_articulo que no existe:').setFontWeight('bold');
+  hoja.getRange('D3').setFormula(F('=ARRAYFORMULA(IFERROR(TEXTJOIN(", ";TRUE;FILTER("fila "&ROW('
+    + R('id_articulo') + ');' + R('id_articulo') + '<>"";ISNA(MATCH(' + R('id_articulo') + ';' + A('id') + ';0))));"Ninguna"))'));
   hoja.getRange(4, 1, 1, 6).setValues([['id', 'Artículo', 'Producto', 'Apartado por', 'Parecidos', 'Alerta']]).setFontWeight('bold');
 
-  var filas = activos.map(function (a, i) {
-    var r = primera + i;
-    var cond = R('id_articulo') + '=$A' + r;
-    return [
-      a.id, a.que, a.producto,
-      F('=IFERROR(INDEX(FILTER(' + R('nombre') + ';' + cond + ';' + R('tipo') + '="apartado";' + activoReg + ');1);"—")'),
-      F('=IFERROR(TEXTJOIN(", ";TRUE;FILTER(' + R('nombre') + ';' + cond + ';' + R('tipo') + '="parecido";' + activoReg + '));"")'),
-      F('=IF(COUNTIFS(' + R('id_articulo') + ';$A' + r + ';' + R('tipo') + ';"apartado";' + R('estado') + ';"activo")+COUNTIFS('
-        + R('id_articulo') + ';$A' + r + ';' + R('tipo') + ';"apartado";' + R('estado') + ';"")>1;"Duplicado: libera uno en registros";"")'),
-    ];
-  });
-  if (filas.length) {
-    hoja.getRange(primera, 1, filas.length, 3).setValues(filas.map(function (f) { return f.slice(0, 3); }));
-    hoja.getRange(primera, 4, filas.length, 3).setFormulas(filas.map(function (f) { return f.slice(3); }));
-  }
+  var col = function (letra) { return '$' + letra + '$' + primera + ':$' + letra; };
+  hoja.getRange(primera, 1, 1, 6).setFormulas([[
+    F('=IFERROR(FILTER(' + A('id') + ';' + visible + ');"")'),
+    F('=IFERROR(FILTER(' + A('que') + ';' + visible + ');"")'),
+    F('=IFERROR(FILTER(' + A('producto') + ';' + visible + ');"")'),
+    F('=MAP(' + col('A') + ';LAMBDA(x;IF(x="";"";IFERROR(INDEX(FILTER(' + R('nombre') + ';' + R('id_articulo') + '=x;'
+      + R('tipo') + '="apartado";' + activoReg + ');1);"—"))))'),
+    F('=MAP(' + col('A') + ';LAMBDA(x;IF(x="";"";IFERROR(TEXTJOIN(", ";TRUE;FILTER(' + R('nombre') + ';' + R('id_articulo')
+      + '=x;' + R('tipo') + '="parecido";' + activoReg + '));""))))'),
+    F('=MAP(' + col('A') + ';LAMBDA(x;IF(x="";"";IF(COUNTIFS(' + R('id_articulo') + ';x;' + R('tipo') + ';"apartado";'
+      + R('estado') + ';"activo")+COUNTIFS(' + R('id_articulo') + ';x;' + R('tipo') + ';"apartado";' + R('estado')
+      + ';"")>1;"Duplicado: libera uno en registros";""))))'),
+  ]]);
 
-  var fDesconocidos = ultima + 2;
-  hoja.getRange(fDesconocidos, 1).setValue('Filas de «registros» con id_articulo que no existe:').setFontWeight('bold');
-  hoja.getRange(fDesconocidos, 4).setFormula(F('=ARRAYFORMULA(IFERROR(TEXTJOIN(", ";TRUE;FILTER("fila "&ROW('
-    + R('id_articulo') + ');' + R('id_articulo') + '<>"";ISNA(MATCH(' + R('id_articulo') + ';' + A('id') + ';0))));"Ninguna"))'));
-
-  // Bitácora: lo último primero, con fecha y hora de Costa Rica.
-  var fBitacora = fDesconocidos + 2;
+  // Bitácora: lo último primero, con fecha y hora de Costa Rica (columnas H a L).
   var ultimaCol = letraColumna(Math.max.apply(null, ENCABEZADOS.registros.map(function (h) { return colReg[h]; })));
   var q = function (h) { return letraColumna(colReg[h]); };
-  hoja.getRange(fBitacora, 1).setValue('Bitácora (activos, lo último primero)').setFontWeight('bold');
-  hoja.getRange(fBitacora + 1, 1).setFormula(F('=QUERY(registros!A:' + ultimaCol + ';"select ' + [q('id_articulo'), q('tipo'),
+  hoja.getRange('H4').setValue('Bitácora (activos, lo último primero)').setFontWeight('bold');
+  hoja.getRange('H5').setFormula(F('=QUERY(registros!A:' + ultimaCol + ';"select ' + [q('id_articulo'), q('tipo'),
     q('nombre'), q('creado'), q('origen')].join(', ') + ' where ' + q('id_articulo') + ' is not null and (' + q('estado')
     + ' = \'activo\' or ' + q('estado') + ' is null) order by ' + q('creado') + ' desc";1)'));
-  // Una hoja nueva trae 1000 filas: hay que crecerla antes de formatear la bitácora completa.
-  var hasta = fBitacora + 1 + LIMITES.MAX_FILAS_REGISTROS;
+  // Una hoja nueva trae 1000 filas: hay que crecerla para que quepan la lista y la bitácora completas.
+  var hasta = primera + 1 + LIMITES.MAX_FILAS_REGISTROS;
   if (hoja.getMaxRows() < hasta) hoja.insertRowsAfter(hoja.getMaxRows(), hasta - hoja.getMaxRows());
-  hoja.getRange(fBitacora + 2, 4, LIMITES.MAX_FILAS_REGISTROS, 1).setNumberFormat('d/m/yyyy h:mm am/pm');
+  hoja.getRange(primera + 1, 11, LIMITES.MAX_FILAS_REGISTROS, 1).setNumberFormat('d/m/yyyy h:mm am/pm');
 
   // Duplicado: texto + rojo (el color es solo refuerzo).
   var regla = SpreadsheetApp.newConditionalFormatRule().whenTextStartsWith('Duplicado')
-    .setFontColor('#B8432C').setBold(true).setRanges([hoja.getRange(primera, 6, Math.max(activos.length, 1), 1)]).build();
+    .setFontColor('#B8432C').setBold(true).setRanges([hoja.getRange(primera, 6, hoja.getMaxRows() - primera + 1, 1)]).build();
   hoja.setConditionalFormatRules([regla]);
   hoja.setFrozenRows(4);
   hoja.getRange('A1').setFontWeight('bold');
-  hoja.setColumnWidth(1, 130);
-  hoja.setColumnWidth(2, 220);
-  hoja.setColumnWidth(3, 220);
-  hoja.setColumnWidth(4, 170);
-  hoja.setColumnWidth(5, 220);
-  hoja.setColumnWidth(6, 120);
-  proteger_(hoja, 'resumen calculado; edita «registros» para corregir');
+  [130, 220, 220, 170, 220, 120, 24, 130, 90, 170, 150, 80].forEach(function (w, i) { hoja.setColumnWidth(i + 1, w); });
+  proteger_(hoja, 'resumen calculado; edita «registros» o «articulos»');
 }
 
 function asegurarColumnasArticulos_(libro) {

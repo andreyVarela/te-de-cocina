@@ -46,11 +46,13 @@ check() {
 }
 
 LLAVES_ART='r.articulos.every(a => JSON.stringify(Object.keys(a).sort()) === JSON.stringify(["apartado_por","id","mio","parecidos"]))'
+LLAVES_CAT='Array.isArray(r.catalogo) && JSON.stringify(r.catalogo.map(c => c.id)) === JSON.stringify(r.articulos.map(a => a.id)) && r.catalogo.every(c => JSON.stringify(Object.keys(c).sort()) === JSON.stringify(["aviso","cantidad","cat","id","imagen","precio_crc","producto","que","tienda","url"]) && c.que && (c.url === "" || c.url.startsWith("https://")) && (c.imagen === "" || c.imagen.startsWith("https://")))'
 
 # 1. ver anónimo: llaves exactas, nada privado
 V="$(get 'accion=ver')"
 check "ver: 200 tras redirect con el sobre ok" "$V" 'r.ok === true && typeof r.generado_en === "string" && Array.isArray(r.articulos)'
-check "ver: llaves exactas en raíz y en cada artículo" "$V" "JSON.stringify(Object.keys(r).sort()) === '[\"articulos\",\"generado_en\",\"ok\"]' && $LLAVES_ART"
+check "ver: llaves exactas en raíz y en cada artículo" "$V" "JSON.stringify(Object.keys(r).sort()) === '[\"articulos\",\"catalogo\",\"generado_en\",\"ok\"]' && $LLAVES_ART"
+check "ver: catálogo de la hoja, mismo orden, solo campos de vitrina y enlaces https" "$V" "$LLAVES_CAT"
 check "ver: sin token, mio = null en todo" "$V" 'r.articulos.every(a => a.mio === null)'
 check "ver: no expone hash, creado, origen ni nombre completo" "$V" '!/hash_token|creado|origen|"nombre"|[0-9a-f]{64}/.test(JSON.stringify(r))'
 check "ver: token inválido se ignora (no es error)" "$(get 'accion=ver&token=xyz')" 'r.ok === true && r.articulos.every(a => a.mio === null)'

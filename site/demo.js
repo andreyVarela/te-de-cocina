@@ -3,16 +3,37 @@
    Simula las acciones del Apps Script (ver, apartar, soltar) en memoria (sessionStorage), con el
    mismo sobre {ok, codigo, mensaje, datos} y los mismos códigos del contrato.
    Variantes: ?demo · ?demo=dormido · ?demo=intermitente (falla el primer `ver`) · ?demo=conflicto · ?demo=lento · ?demo=privado
+   · ?demo=panel (como si Andrey editara la hoja: esconde el 2.º, renombra el 1.º y agrega dos nuevos)
    Añade &reiniciar para borrar el estado simulado. Latencia normal simulada: 1,2 s (como Apps Script). */
 (function () {
   'use strict';
   var CLAVE = 'tdc.demo.estado';
 
+  var foto = null;   // catálogo leído del HTML la primera vez (después el DOM ya lo redibuja app.js)
   function ids() {
-    var desdeDom = Array.prototype.map.call(document.querySelectorAll('.articulo[data-id]'), function (li) {
-      return { id: li.getAttribute('data-id'), que: (li.querySelector('.que') || {}).textContent || '', producto: (li.querySelector('.producto') || {}).textContent || '' };
+    if (!foto) {
+      foto = Array.prototype.map.call(document.querySelectorAll('.articulo[data-id]'), function (li) {
+        var cat = li.closest('.cat');
+        var h3 = cat && cat.querySelector('h3');
+        var enlace = li.querySelector('.tienda a');
+        return {
+          id: li.getAttribute('data-id'), cat: h3 ? h3.childNodes[1].nodeValue : 'Otros',
+          que: (li.querySelector('.que') || {}).textContent || '', producto: (li.querySelector('.producto') || {}).textContent || '',
+          tienda: enlace ? enlace.firstChild.nodeValue.replace(/^Ver en /, '') : '', url: enlace ? enlace.getAttribute('href') : '',
+          imagen: (li.querySelector('.foto img') || { getAttribute: function () { return ''; } }).getAttribute('src') || '',
+          precio_crc: 1000, cantidad: 1, aviso: ''
+        };
+      });
+    }
+    if (modo !== 'panel') return foto;
+    var lista = foto.filter(function (x, i) { return i !== 1; }).map(function (x, i) {
+      return i === 0 ? Object.assign({}, x, { que: x.que + ' (editado en la hoja)', aviso: 'Aviso nuevo desde la hoja' }) : x;
     });
-    return desdeDom;
+    lista.splice(2, 0, { id: 'wok-negro', cat: lista[0].cat, que: 'Wok negro', producto: 'Wok de hierro 30 cm', tienda: 'Novex',
+      url: 'https://novex.cr/', imagen: '', precio_crc: 12500, cantidad: 1, aviso: '' });
+    lista.push({ id: 'planta', cat: 'Plantas', que: 'Una planta', producto: 'Potus en maceta', tienda: '', url: 'javascript:alert(1)',
+      imagen: 'http://inseguro/x.jpg', precio_crc: 0, cantidad: 2, aviso: '' });
+    return lista;
   }
 
   function uuid() {
@@ -99,7 +120,8 @@
   var fn = {
     ver: function (a) {
       a = { p_token: a.token };
-      return { ok: true, generado_en: new Date().toISOString(), articulos: ids().map(function (x) {
+      var catalogo = ids();
+      return { ok: true, generado_en: new Date().toISOString(), catalogo: catalogo, articulos: catalogo.map(function (x) {
         var e = estadoDe(x.id);
         var mio = null;
         activos().forEach(function (g) { if (g.articulo_id === x.id && a.p_token && g.dispositivo_hash === a.p_token) mio = g.tipo; });
