@@ -3,3 +3,12 @@
 .env.*
 !.env.example
 node_modules/
+dist/
+.impeccable/
+
+# Notas internas del equipo (solo locales)
+docs/trabajo/
+docs/agentes/
+BRIEF.md
+invitacion-v1.html
+lista-borrador.json
