@@ -3,7 +3,7 @@
 // Node ≥ 18, solo módulos nativos. Contrato: docs/arquitectura/contrato.md §2 y §8.
 //
 // Uso:
-//   node scripts/build.mjs             → valida todo, genera dist/ y apps-script/Code.gs
+//   node scripts/build.mjs             → valida todo, genera dist/ (una página por evento + inicio) y apps-script/Code.gs
 //   node scripts/build.mjs --solo-code → valida el catálogo y genera solo Code.gs (no necesita site/ ni evento.json)
 //   node scripts/build.mjs --demo      → además copia site/demo.js a dist/ (solo para probar en localhost con ?demo)
 //
@@ -32,9 +32,12 @@ const NBSP = '\u00a0';
 const ID_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const CAMPOS_CATALOGO = new Set(['id', 'cat', 'que', 'producto', 'aviso', 'tienda', 'url', 'imagen',
   'precio_crc', 'cantidad', 'verificado', 'nota']);
-const CAMPOS_EVENTO = new Set(['empieza_en', 'lugar', 'api_url']);
-// Archivos de site/ que se publican sí o sí (contrato §2 y §8). index.html o plantilla.html.
-const SITE_OBLIGATORIOS = ['app.js', 'api.js', 'estilos.css', 'partes/articulo.html', 'partes/categoria.html'];
+const CAMPOS_RAIZ_EVENTO = new Set(['api_url', 'eventos']);
+const CAMPOS_EVENTO = new Set(['slug', 'nombre', 'empieza_en', 'lugar']);
+// Archivos de site/ que se publican sí o sí (contrato §2 y §8). index.html es la plantilla de cada evento
+// (sale como <slug>.html) e inicio.html la portada que enlaza a los eventos (sale como index.html).
+const SITE_OBLIGATORIOS = ['index.html', 'inicio.html', 'app.js', 'api.js', 'estilos.css',
+  'partes/articulo.html', 'partes/categoria.html', 'partes/evento.html'];
 // Lo que nunca va a dist/: fuentes de plantillas y el simulador local.
 const SITE_NO_PUBLICAR = (rel) => rel === 'partes' || rel.startsWith('partes/') || (rel === 'demo.js' && !CON_DEMO);
 // APIs de Google prohibidas en Logica.js (debe ser pura para probarse en Node).
@@ -119,20 +122,40 @@ function validarEvento(evento) {
     throw new ErrorBuild('  - evento.json debe ser un objeto { ... }.');
   }
   for (const k of Object.keys(evento)) {
-    if (!k.startsWith('_') && !CAMPOS_EVENTO.has(k)) fallo(`evento.json: campo desconocido «${k}».`);
+    if (!k.startsWith('_') && !CAMPOS_RAIZ_EVENTO.has(k)) fallo(`evento.json: campo desconocido «${k}».`);
   }
-  for (const k of CAMPOS_EVENTO) if (!(k in evento)) fallo(`evento.json: falta «${k}».`);
+  for (const k of CAMPOS_RAIZ_EVENTO) if (!(k in evento)) fallo(`evento.json: falta «${k}».`);
   cortarSiHayErrores();
 
-  const e = evento.empieza_en;
-  if (e !== null && e !== '') {
-    if (typeof e !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(Z|[+-]\d{2}:\d{2})$/.test(e)
-        || Number.isNaN(Date.parse(e))) {
-      fallo('evento.json: «empieza_en» debe ser null (Por confirmar) o fecha y hora con zona, '
-        + 'p. ej. "2026-12-05T14:00:00-06:00" (Costa Rica es -06:00).');
-    }
+  if (!Array.isArray(evento.eventos) || evento.eventos.length === 0) {
+    throw new ErrorBuild('  - evento.json: «eventos» debe ser una lista con al menos un evento [ { ... } ].');
   }
-  if (typeof evento.lugar !== 'string' || !evento.lugar.trim()) fallo('evento.json: «lugar» no puede ir vacío.');
+  const slugs = new Set();
+  evento.eventos.forEach((ev, i) => {
+    const donde = `evento.json, evento ${i + 1}`;
+    if (!ev || typeof ev !== 'object' || Array.isArray(ev)) { fallo(`${donde}: debe ser un objeto { ... }.`); return; }
+    for (const k of Object.keys(ev)) {
+      if (!k.startsWith('_') && !CAMPOS_EVENTO.has(k)) fallo(`${donde}: campo desconocido «${k}».`);
+    }
+    for (const k of CAMPOS_EVENTO) if (!(k in ev)) fallo(`${donde}: falta «${k}».`);
+    if (typeof ev.slug !== 'string' || !ID_RE.test(ev.slug) || ev.slug === 'index') {
+      fallo(`${donde}: «slug» va en minúsculas y sin espacios (p. ej. "familia"); es el final del link.`);
+    } else if (slugs.has(ev.slug)) {
+      fallo(`${donde}: el «slug» "${ev.slug}" está repetido.`);
+    } else {
+      slugs.add(ev.slug);
+    }
+    if (typeof ev.nombre !== 'string' || !ev.nombre.trim()) fallo(`${donde}: «nombre» no puede ir vacío.`);
+    const e = ev.empieza_en;
+    if (e !== null && e !== '') {
+      if (typeof e !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(Z|[+-]\d{2}:\d{2})$/.test(e)
+          || Number.isNaN(Date.parse(e))) {
+        fallo(`${donde}: «empieza_en» debe ser null (Por confirmar) o fecha y hora con zona, `
+          + 'p. ej. "2026-12-05T14:00:00-06:00" (Costa Rica es -06:00).');
+      }
+    }
+    if (typeof ev.lugar !== 'string' || !ev.lugar.trim()) fallo(`${donde}: «lugar» no puede ir vacío.`);
+  });
 
   const apiUrl = String(evento.api_url ?? '').trim();
   const pendiente = !apiUrl || /XXXX/i.test(apiUrl);
@@ -320,8 +343,6 @@ function construirSitio(catalogo, evento, apiUrl) {
     throw new ErrorBuild('  - No existe la carpeta site/ (el frontend). '
       + 'Sin ella no hay página que publicar. Para generar solo Code.gs: node scripts/build.mjs --solo-code');
   }
-  const paginaPublica = ['index.html', 'plantilla.html'].find((f) => existsSync(join(SITE, f)));
-  if (!paginaPublica) throw new ErrorBuild('  - Falta site/index.html (o site/plantilla.html): la página pública.');
   for (const f of SITE_OBLIGATORIOS) {
     if (!existsSync(join(SITE, f))) fallo(`Falta site/${f}.`);
   }
@@ -333,9 +354,7 @@ function construirSitio(catalogo, evento, apiUrl) {
   for (const f of todos.sort()) version.update(relative(SITE, f)).update(readFileSync(f));
   version.update(JSON.stringify(catalogo)).update(JSON.stringify(evento));
 
-  const datosGlobales = {
-    ...textosFecha(evento.empieza_en),
-    LUGAR: evento.lugar.trim(),
+  const datosBase = {
     API_URL: apiUrl,
     TOTAL_ARTICULOS: catalogo.length,
     VERSION: version.digest('hex').slice(0, 10),
@@ -345,27 +364,53 @@ function construirSitio(catalogo, evento, apiUrl) {
     id: a.id, cat: a.cat, que: a.que, producto: a.producto, aviso: a.aviso || null,
     precio: a.precio, tienda: a.tienda, url: a.url, imagen: a.imagen,
   })));
-  const htmlGlobal = {
+  const htmlEvento = {
     CATEGORIAS: () => (categorias ??= htmlCategorias(articulos)),
     CATALOGO_JSON: catalogoJson,
     ARTICULOS_JSON: catalogoJson,  // alias
+  };
+  const datosDeEvento = (ev) => ({
+    ...datosBase,
+    ...textosFecha(ev.empieza_en),
+    EVENTO: ev.nombre.trim(),
+    LUGAR: ev.lugar.trim(),
+  });
+  const parteEvento = leerParte('evento.html');
+  const htmlInicio = {
+    EVENTOS: () => evento.eventos.map((ev) => {
+      const d = datosDeEvento(ev);
+      return renderizar(parteEvento, { slug: ev.slug, nombre: d.EVENTO, fecha_hora: d.FECHA_HORA, lugar: d.LUGAR },
+        {}, 'site/partes/evento.html');
+    }).join('\n'),
+  };
+
+  const revisar = (html, origen) => {
+    if (!/<meta\s+name=["']robots["']\s+content=["'][^"']*noindex/i.test(html)) {
+      fallo(`${origen}: falta <meta name="robots" content="noindex, nofollow"> (contrato §7).`);
+    }
+    const resto = /\{\{[^}]*\}{0,3}/.exec(html);
+    if (resto) fallo(`${origen}: quedó un marcador sin reemplazar: «${resto[0]}». Revisa la sintaxis {{nombre}} / {{{NOMBRE}}}.`);
+    return { html };
   };
 
   const salidas = new Map();
   for (const ruta of todos) {
     const rel = relative(SITE, ruta);
     if (SITE_NO_PUBLICAR(rel)) continue;  // partes/ = fuente de plantillas; demo.js solo con --demo
-    const destino = rel === paginaPublica ? 'index.html' : rel;
-    if (!rel.includes('/') && rel.endsWith('.html')) {
-      const html = renderizar(readFileSync(ruta, 'utf8'), datosGlobales, htmlGlobal, `site/${rel}`);
-      if (!/<meta\s+name=["']robots["']\s+content=["'][^"']*noindex/i.test(html)) {
-        fallo(`site/${rel}: falta <meta name="robots" content="noindex, nofollow"> (contrato §7).`);
+    if (rel === 'index.html') {
+      // Plantilla de evento: una página por evento, todas contra la misma hoja y la misma lista.
+      const plantilla = readFileSync(ruta, 'utf8');
+      for (const ev of evento.eventos) {
+        salidas.set(`${ev.slug}.html`, revisar(renderizar(plantilla, datosDeEvento(ev), htmlEvento, 'site/index.html'),
+          `site/index.html (${ev.slug})`));
       }
-      const resto = /\{\{[^}]*\}{0,3}/.exec(html);
-      if (resto) fallo(`site/${rel}: quedó un marcador sin reemplazar: «${resto[0]}». Revisa la sintaxis {{nombre}} / {{{NOMBRE}}}.`);
-      salidas.set(destino, { html });
+    } else if (rel === 'inicio.html') {
+      salidas.set('index.html', revisar(renderizar(readFileSync(ruta, 'utf8'), datosBase, htmlInicio, 'site/inicio.html'),
+        'site/inicio.html'));
+    } else if (!rel.includes('/') && rel.endsWith('.html')) {
+      fallo(`site/${rel}: solo se publican site/index.html (plantilla de evento) y site/inicio.html (portada).`);
     } else {
-      salidas.set(destino, { copiar: ruta });  // se copia tal cual
+      salidas.set(rel, { copiar: ruta });  // se copia tal cual
     }
   }
   cortarSiHayErrores();
@@ -409,9 +454,8 @@ try {
 
   if (!SOLO_CODE) {
     const n = construirSitio(catalogo, evento, apiUrl);
-    const f = textosFecha(evento.empieza_en);
-    console.log(`OK: dist/ con ${n} archivos + robots.txt. Fecha: ${f.FECHA_HORA.replace(/\u00a0/g, ' ')} · `
-      + `API: ${apiUrl || '(pendiente)'}`);
+    const fechas = evento.eventos.map((ev) => `${ev.slug}: ${textosFecha(ev.empieza_en).FECHA_HORA.replace(/\u00a0/g, ' ')}`);
+    console.log(`OK: dist/ con ${n} archivos + robots.txt. ${fechas.join(' · ')} · API: ${apiUrl || '(pendiente)'}`);
   }
 } catch (e) {
   if (e instanceof ErrorBuild) {

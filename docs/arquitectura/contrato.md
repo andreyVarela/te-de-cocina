@@ -21,7 +21,7 @@ ambos cumplen y que se verifica antes de publicar.
 ## 2. Fuentes de verdad y archivos
 
 ```
-evento.json                 ← ÚNICO archivo que edita Andrey: fecha/hora, lugar, api_url
+evento.json                 ← ÚNICO archivo que edita Andrey: carnitas (fecha/hora, lugar), api_url
 catalogo.json               ← catálogo (lo edita Andrey); gana `id` estable y `aviso`
 scripts/build.mjs           ← Node ≥ 18 sin dependencias: catalogo.json + evento.json → dist/ y apps-script/Code.gs
 site/                       ← frontend: index.html (+ partes/), app.js, api.js, estilos.css, img/
@@ -38,11 +38,17 @@ No existe `despertar.yml` (Apps Script no se pausa) ni `admin.html` ni secreto d
 ### `evento.json`
 ```json
 {
-  "empieza_en": null,
-  "lugar": "Mi apartamento",
-  "api_url": "https://script.google.com/macros/s/XXXX/exec"
+  "api_url": "https://script.google.com/macros/s/XXXX/exec",
+  "eventos": [
+    { "slug": "familia", "nombre": "Carnita con la familia", "empieza_en": null, "lugar": "Mi apartamento" },
+    { "slug": "amigos",  "nombre": "Carnita con los amigos", "empieza_en": null, "lugar": "Mi apartamento" }
+  ]
 }
 ```
+- `eventos`: una entrada por carnita. Cada una sale como `dist/<slug>.html` desde `site/index.html`;
+  `site/inicio.html` sale como `dist/index.html` y enlaza a todas (parcial `site/partes/evento.html`).
+  Todas usan la misma `api_url`, así que comparten hoja y lista. `slug` es el final del link: no se
+  cambia después de mandarlo. `nombre` se ve en la cabecera de su página.
 - `empieza_en`: `null` → «Por confirmar». Con valor, ISO 8601 con zona explícita:
   `"2026-12-05T14:00:00-06:00"`. El build lo formatea en `es-CR`, zona `America/Costa_Rica`,
   como «sábado 5 de diciembre · 2:00 p. m.» y lo deja escrito en el HTML (se ve sin JS y sin API).
@@ -112,7 +118,7 @@ Estados con texto, no solo color (Andrey es daltónico): el rojo del «Duplicado
 
 | Superficie | Consumidor | Entrada | Guard | Sobre |
 |---|---|---|---|---|
-| Pública | `dist/index.html` vía `site/api.js` | `GET api_url?accion=ver[&token=…]` · `POST api_url` (text/plain, JSON) | token de dispositivo (solo para «lo mío» y soltar) | §6 |
+| Pública | `dist/<slug>.html` vía `site/api.js` | `GET api_url?accion=ver[&token=…]` · `POST api_url` (text/plain, JSON) | token de dispositivo (solo para «lo mío» y soltar) | §6 |
 | Dueño | Andrey en la hoja | app de Sheets | su cuenta de Google | n/a |
 
 - **URL de la web app:** pública por diseño; identifica el script, no a nadie. El script corre como
@@ -249,7 +255,7 @@ algo que alguien tenía abierto»). Errores: `articulo_invalido`, `token_invalid
 ## 8. Build, seed y despliegue
 
 - `scripts/build.mjs`: valida `catalogo.json` (ids únicos y con formato, `aviso` opcional,
-  `precio_crc` entero), lee `evento.json`, renderiza lista y fecha en `dist/index.html` desde
+  `precio_crc` entero), lee `evento.json`, renderiza lista y fecha en `dist/<slug>.html` (una por carnita) desde
   `site/index.html` (con parciales de `site/partes/`), copia `site/{app.js,api.js,estilos.css,img}` inyectando `api_url`,
   escribe `dist/robots.txt`, y **genera `apps-script/Code.gs`** = `Logica.js` + `Servidor.js` +
   `const CATALOGO = [...]` (solo `id, que, producto, cantidad, orden`; sin `nota`). Precio con
@@ -298,7 +304,7 @@ con nombre «Prueba contrato» que Andrey puede borrar; el script no las disting
 
 ## 10. Operación para Andrey (resumen; el detalle va en el README )
 
-- **Cambiar fecha/hora:** editar `empieza_en` en `evento.json` en GitHub → merge → 1 min.
+- **Cambiar fecha/hora:** editar `empieza_en` de la carnita en `evento.json` en GitHub → merge → 1 min.
 - **Ver quién apartó qué:** abrir la hoja, pestaña `resumen` (cabecera «Apartados: X de 36 ·
   Parecidos: Y», uno por artículo con nombre completo, y la bitácora con fecha y hora).
 - **Liberar un apartado o quitar un parecido:** en `registros`, poner `estado = liberado` en esa

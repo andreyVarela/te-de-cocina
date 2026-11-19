@@ -12,3 +12,6 @@ docs/agentes/
 BRIEF.md
 invitacion-v1.html
 lista-borrador.json
+
+# Configuración local del editor
+.claude/
