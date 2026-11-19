@@ -208,7 +208,7 @@ test('8. ver: solo id/apartado_por/parecidos/mio, estado vacío = activo, ids de
   assert.deepEqual(ver.articulos[2], { id: 'tazas', apartado_por: 'Tía', parecidos: [], mio: null });
   assert.deepEqual(ver.articulos[0], { id: 'sarten-20', apartado_por: null, parecidos: [], mio: null });
   // Sin hash (token ausente o inválido): mio siempre null.
-  assert.ok(L.proyectarPublico(ARTICULOS, h.leer(), null).articulos.every((a) => a.mio === null));
+  assert.ok(L.proyectarPublico(ARTICULOS, h.leer(), null, new Date()).articulos.every((a) => a.mio === null));
 });
 
 test('8b. dos apartados activos a mano en el mismo artículo → ver muestra el de la fila más arriba', () => {
@@ -278,8 +278,9 @@ test('frecuencia: 6 por dispositivo por minuto, ventana fija, y el global corta 
   assert.equal(septimo.error.datos.motivo, 'frecuencia');
   assert.equal(septimo.error.datos.reintentar_en_s, 50);
   assert.equal(L.controlFrecuencia(d, g, t0 + 60_000, lim).ok, true);  // ventana vencida
-  const globalLleno = `30:${t0 + 60_000}`;
-  assert.equal(L.controlFrecuencia(undefined, globalLleno, t0, lim).ok, false);
+  assert.equal(lim.MAX_ESCRITURAS_POR_MINUTO_GLOBAL, 15);
+  assert.equal(L.controlFrecuencia(undefined, `14:${t0 + 60_000}`, t0, lim).ok, true);
+  assert.equal(L.controlFrecuencia(undefined, `15:${t0 + 60_000}`, t0, lim).ok, false);
 });
 
 test('textoSeguroParaCelda: un nombre nunca se vuelve fórmula en la hoja', () => {
@@ -288,6 +289,11 @@ test('textoSeguroParaCelda: un nombre nunca se vuelve fórmula en la hoja', () =
   assert.equal(L.textoSeguroParaCelda('-Ana'), "'-Ana");
   assert.equal(L.textoSeguroParaCelda('@Ana'), "'@Ana");
   assert.equal(L.textoSeguroParaCelda('Ana = Luis'), 'Ana = Luis');
+});
+
+test('Logica.js no lee el reloj: proyectarPublico exige `ahora`', () => {
+  assert.ok(!/new Date\(|Date\.now\(/.test(codigo.replace(/^\s*(\/\/|\*).*$/gm, '')));
+  assert.throws(() => L.proyectarPublico(ARTICULOS, [], null));
 });
 
 test('formulaConSeparador respeta el texto entre comillas', () => {

@@ -1,7 +1,8 @@
+/** @OnlyCurrentDoc */
 // GENERADO por scripts/build.mjs: no editar a mano. Se edita apps-script/Logica.js,
 // apps-script/Servidor.js o catalogo.json y se corre: node scripts/build.mjs
 // Cómo se usa: copiar TODO este archivo y pegarlo en Extensiones → Apps Script → Código.gs (README).
-// Artículos: 36. Huella: e07207ecde6d
+// Artículos: 36. Huella: 4aba371caef4
 
 // ===================================================================== catálogo (desde catalogo.json)
 const CATALOGO = [
@@ -53,7 +54,7 @@ const CATALOGO = [
 var LIMITES = Object.freeze({
   TOPE_APARTADOS_POR_DISPOSITIVO: 5,
   MAX_ESCRITURAS_POR_MINUTO_DISPOSITIVO: 6,
-  MAX_ESCRITURAS_POR_MINUTO_GLOBAL: 30,
+  MAX_ESCRITURAS_POR_MINUTO_GLOBAL: 15,
   MAX_FILAS_REGISTROS: 2000,
   CACHE_VER_SEGUNDOS: 5,
   LOCK_MS: 10000,
@@ -256,7 +257,7 @@ function estadoArticulo(registros, articuloId) {
 /**
  * Respuesta de `ver` (§6): todos los artículos activos en `orden`, con nombre de pila del apartado,
  * pilas de parecidos y `mio`. Nunca nombre completo, hash_token, creado ni origen.
- * `hash` puede ser null (token ausente o inválido → mio = null).
+ * `hash` puede ser null (token ausente o inválido → mio = null). `ahora` (Date) lo pasa quien llama.
  */
 function proyectarPublico(articulos, registros, hash, ahora) {
   var activos = registros.filter(esActivo_);
@@ -271,7 +272,7 @@ function proyectarPublico(articulos, registros, hash, ahora) {
     var e = estadoArticulo(activos, a.id);
     return { id: a.id, apartado_por: e.apartado_por, parecidos: e.parecidos, mio: mios[a.id] || null };
   });
-  return { ok: true, generado_en: (ahora || new Date()).toISOString(), articulos: lista };
+  return { ok: true, generado_en: ahora.toISOString(), articulos: lista };
 }
 
 // ------------------------------------------------------------------ decisiones de escritura
@@ -430,6 +431,9 @@ function letraColumna(n) {
   return s;
 }
 
+/** @OnlyCurrentDoc */
+// ↑ Limita el permiso a ESTA hoja (spreadsheets.currentonly). No quitar: sin él, Google pediría
+//   acceso a todas las hojas de cálculo de Andrey.
 // ============================================================================================
 // Servidor.js · capa fina con APIs de Google (contrato §5, §6 y §8).
 // doGet → `ver` · doPost → `apartar` / `soltar` · setup() → prepara la hoja (idempotente).
@@ -742,8 +746,8 @@ function prepararArticulos_(libro) {
     }
     var f = datos[i];
     f[col.id - 1] = a.id;
-    f[col.que - 1] = a.que;
-    f[col.producto - 1] = a.producto;
+    f[col.que - 1] = textoSeguroParaCelda(a.que);
+    f[col.producto - 1] = textoSeguroParaCelda(a.producto);
     f[col.cantidad - 1] = a.cantidad;
     f[col.orden - 1] = a.orden;
     f[col.activo - 1] = 'si';

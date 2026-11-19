@@ -1,3 +1,6 @@
+/** @OnlyCurrentDoc */
+// ↑ Limita el permiso a ESTA hoja (spreadsheets.currentonly). No quitar: sin él, Google pediría
+//   acceso a todas las hojas de cálculo de Andrey.
 // ============================================================================================
 // Servidor.js · capa fina con APIs de Google (contrato §5, §6 y §8).
 // doGet → `ver` · doPost → `apartar` / `soltar` · setup() → prepara la hoja (idempotente).
@@ -310,8 +313,8 @@ function prepararArticulos_(libro) {
     }
     var f = datos[i];
     f[col.id - 1] = a.id;
-    f[col.que - 1] = a.que;
-    f[col.producto - 1] = a.producto;
+    f[col.que - 1] = textoSeguroParaCelda(a.que);
+    f[col.producto - 1] = textoSeguroParaCelda(a.producto);
     f[col.cantidad - 1] = a.cantidad;
     f[col.orden - 1] = a.orden;
     f[col.activo - 1] = 'si';

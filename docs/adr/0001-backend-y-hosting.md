@@ -59,7 +59,7 @@ Contrato técnico que implementan FORGE y AURORA: `docs/arquitectura/contrato.md
   script corre como Andrey pero solo toca esta hoja (`getActiveSpreadsheet()`), no pide otros
   permisos y no expone nombres completos, hashes ni horas en `ver`. Anti-abuso en el script:
   validación de nombre, tope de 5 apartados por dispositivo, límite de frecuencia por dispositivo y
-  global con `CacheService`, tope total de filas. Recuperación: Andrey filtra por `hash_token` en
+  global con `CacheService`, tope total de filas. Límite global: 15 escrituras/min. Recuperación: Andrey filtra por `hash_token` (o por rango de `creado` si el atacante rota tokens) en
   la hoja y libera todo lo de un dispositivo en bloque.
 - **Redespliegue:** la URL cambia si se crea «Nueva implementación». Para actualizar código sin
   cambiar la URL: Implementar → Administrar implementaciones → lápiz → Versión: «Nueva versión» →
@@ -76,8 +76,11 @@ Contrato técnico que implementan FORGE y AURORA: `docs/arquitectura/contrato.md
 1. Una **hoja de Google nueva** en su cuenta, nombre `te-de-cocina` (privada; no compartir).
    Archivo → Configuración → zona horaria «(GMT-06:00) Costa Rica».
 2. Extensiones → Apps Script: pegar el contenido de `apps-script/Code.gs` (un solo archivo que
-   genera el build), guardar, ejecutar `setup()` una vez y aceptar los permisos (solo «ver y
-   administrar hojas de cálculo» de esa hoja). Eso crea las pestañas `articulos`, `registros` y
+   genera el build), guardar, ejecutar `setup()` una vez y aceptar **un solo permiso**: «Ver y
+   administrar las hojas de cálculo en las que se instaló esta aplicación» (alcance
+   `spreadsheets.currentonly`, solo esta hoja; lo fija la línea `/** @OnlyCurrentDoc */` al inicio de
+   `Code.gs`, sin manifiesto). Si Google pide acceso a «todas tus hojas de cálculo» o a cualquier otra
+   cosa, no aceptar: el `Code.gs` pegado no es el correcto. Eso crea las pestañas `articulos`, `registros` y
    `resumen` y carga los 36 artículos.
 3. Implementar → Nueva implementación → Aplicación web → «Ejecutar como: yo», «Quién tiene
    acceso: cualquier persona» → copiar la URL `…/exec` y pegarla en `api_url` de `evento.json`.

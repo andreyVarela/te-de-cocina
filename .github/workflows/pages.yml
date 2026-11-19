@@ -1,5 +1,7 @@
 # Publica la página en GitHub Pages cada vez que algo llega a main (contrato §8).
 # Sin secretos: api_url es pública por diseño y vive en evento.json. Sin npm: Node trae todo.
+# Acciones fijadas por SHA completo (el tag va en el comentario). Para actualizar: resolver el tag
+# con `gh api repos/<owner>/<repo>/git/ref/tags/<tag>` y cambiar el SHA.
 name: Publicar página
 
 on:
@@ -20,9 +22,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
 
@@ -35,13 +37,13 @@ jobs:
       # Por si se editó catalogo.json desde la web: aquí queda el Code.gs nuevo para descargar
       # (pestaña Actions → esta ejecución → Artifacts → Code.gs) y pegarlo en Apps Script.
       - name: Guardar Code.gs generado
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: Code.gs
           path: apps-script/Code.gs
           retention-days: 30
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: dist
 
@@ -53,4 +55,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

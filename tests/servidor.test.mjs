@@ -171,6 +171,16 @@ test('setup() crea las tres pestañas, carga el catálogo y es idempotente', () 
   assert.equal(m.ver().articulos.length, CATALOGO.length - 1);
 });
 
+test('Code.gs limita el permiso a esta hoja y setup() no deja fórmulas desde el catálogo', () => {
+  assert.ok(CODE.startsWith('/** @OnlyCurrentDoc */'));
+  const m = crearMundo();
+  runInContext('CATALOGO[0].que = "=IMPORTDATA(\\"http://x\\")"; CATALOGO[0].producto = "+1"', m.ctx);
+  m.setup();
+  const [a] = m.tabla('articulos');
+  assert.equal(a.que, '\'=IMPORTDATA("http://x")');
+  assert.equal(a.producto, "'+1");
+});
+
 test('setup() usa «,» si Sheets rechaza «;» y las fórmulas no traen restos del otro separador', () => {
   const m = crearMundo();
   m.estado.rechazarPuntoYComa = true;

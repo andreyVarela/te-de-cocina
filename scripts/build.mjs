@@ -275,7 +275,8 @@ function generarCodeGs(catalogo) {
   const filas = catalogo.map((a, i) => `  ${JSON.stringify({
     id: a.id, que: a.que, producto: a.producto, cantidad: a.cantidad ?? 1, orden: i + 1,
   })}`);
-  const codigo = `// GENERADO por scripts/build.mjs: no editar a mano. Se edita apps-script/Logica.js,
+  const codigo = `/** @OnlyCurrentDoc */
+// GENERADO por scripts/build.mjs: no editar a mano. Se edita apps-script/Logica.js,
 // apps-script/Servidor.js o catalogo.json y se corre: node scripts/build.mjs
 // Cómo se usa: copiar TODO este archivo y pegarlo en Extensiones → Apps Script → Código.gs (README).
 // Artículos: ${catalogo.length}. Huella: __HUELLA__
@@ -296,6 +297,7 @@ ${servidor.trim()}
   } catch (e) {
     throw new ErrorBuild(`  - Code.gs no compila: ${e.message}. Revisa Logica.js / Servidor.js.`);
   }
+  if (!final.startsWith('/** @OnlyCurrentDoc */')) fallo('Code.gs: falta /** @OnlyCurrentDoc */ en la primera línea (limita el permiso a esta hoja).');
   for (const fn of ['doGet', 'doPost', 'setup']) {
     if (!new RegExp(`\\bfunction ${fn}\\s*\\(`).test(final)) fallo(`Code.gs: falta la función ${fn}() (Servidor.js).`);
   }

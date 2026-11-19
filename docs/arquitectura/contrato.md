@@ -142,7 +142,7 @@ Estados con texto, no solo color (Andrey es daltónico): el rojo del «Duplicado
   aquí; `Servidor.js` solo lee la hoja, llama a esta función y escribe lo que diga.
 - `decidirSoltar(registros, {articulo, hash})` → filas a marcar `liberado` (0 o 1).
 - Límites (constantes en `Logica.js`): `TOPE_APARTADOS_POR_DISPOSITIVO = 5`,
-  `MAX_ESCRITURAS_POR_MINUTO_DISPOSITIVO = 6`, `MAX_ESCRITURAS_POR_MINUTO_GLOBAL = 30`,
+  `MAX_ESCRITURAS_POR_MINUTO_DISPOSITIVO = 6`, `MAX_ESCRITURAS_POR_MINUTO_GLOBAL = 15`,
   `MAX_FILAS_REGISTROS = 2000`, `CACHE_VER_SEGUNDOS = 5`, `LOCK_MS = 10000`.
 
 En `Servidor.js` (capa fina con APIs de Google):

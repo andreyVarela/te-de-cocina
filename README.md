@@ -18,8 +18,11 @@ nombre o marcan «Llevo algo parecido». Tú ves y corriges todo en una hoja de 
    botón **Copy raw file**, y pégalo. Guarda (ícono de disquete o Ctrl/Cmd + S).
 5. Arriba, en el desplegable de funciones, elige **`setup`** y toca **Ejecutar**.
    - Te pide permisos: **Revisar permisos** → tu cuenta → «Google no ha verificado esta app» →
-     **Configuración avanzada** → **Ir a … (no seguro)** → **Permitir**. Es normal: el script es
-     tuyo y solo pide manejar esta hoja.
+     **Configuración avanzada** → **Ir a … (no seguro)**. Es normal: el script es tuyo.
+   - Debe pedir **un solo permiso**: «Ver y administrar las hojas de cálculo en las que se instaló
+     esta aplicación» (solo esta hoja). Dale **Permitir**. Si pide «todas tus hojas de cálculo»,
+     Drive, Gmail o cualquier otra cosa, **cancela**: no pegaste el `Code.gs` completo (su primera
+     línea debe ser `/** @OnlyCurrentDoc */`).
    - Al terminar, el registro dice «Listo: 36 artículos activos…». En la hoja aparecen las
      pestañas `articulos`, `registros` y `resumen`.
 6. **Implementar → Nueva implementación** → engranaje → **Aplicación web**.
@@ -71,6 +74,7 @@ Los cambios se ven en la página en unos 5 segundos (el invitado recarga).
 | Corregir un nombre mal escrito | Edita la celda `nombre`. |
 | Apartar a nombre de alguien que me escribió | Fila nueva al final: `id_articulo` (cópialo de la pestaña `articulos` o de `resumen`), `tipo` = apartado o parecido, `nombre`, `estado` = activo, `origen` = admin. Lo demás vacío. |
 | Un bromista apartó mucho | Filtra por la columna `hash_token` (su dispositivo) y pon **liberado** en todas. |
+| Ataque: muchas filas raras de golpe (cambian de dispositivo) | En `registros`: **Datos → Crear un filtro**. En el filtro de `creado`: **Filtrar por condición → La fecha es → fecha exacta** (el día del ataque) y luego **Ordenar A → Z** para que queden por hora. Ubica el rango de horas del ataque (primera y última fila rara), escribe **liberado** en la celda `estado` de la primera y arrástrala hasta la última. Quita el filtro. El script acepta como mucho 15 escrituras por minuto en total, así que el daño queda acotado. |
 | Me salió «Duplicado» | Hay dos apartados activos del mismo artículo: libera el que sobre. La página muestra el de más arriba. |
 
 Reglas para no romper nada: no cambies los **nombres** de los encabezados (fila 1). Puedes

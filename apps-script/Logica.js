@@ -8,7 +8,7 @@
 var LIMITES = Object.freeze({
   TOPE_APARTADOS_POR_DISPOSITIVO: 5,
   MAX_ESCRITURAS_POR_MINUTO_DISPOSITIVO: 6,
-  MAX_ESCRITURAS_POR_MINUTO_GLOBAL: 30,
+  MAX_ESCRITURAS_POR_MINUTO_GLOBAL: 15,
   MAX_FILAS_REGISTROS: 2000,
   CACHE_VER_SEGUNDOS: 5,
   LOCK_MS: 10000,
@@ -211,7 +211,7 @@ function estadoArticulo(registros, articuloId) {
 /**
  * Respuesta de `ver` (§6): todos los artículos activos en `orden`, con nombre de pila del apartado,
  * pilas de parecidos y `mio`. Nunca nombre completo, hash_token, creado ni origen.
- * `hash` puede ser null (token ausente o inválido → mio = null).
+ * `hash` puede ser null (token ausente o inválido → mio = null). `ahora` (Date) lo pasa quien llama.
  */
 function proyectarPublico(articulos, registros, hash, ahora) {
   var activos = registros.filter(esActivo_);
@@ -226,7 +226,7 @@ function proyectarPublico(articulos, registros, hash, ahora) {
     var e = estadoArticulo(activos, a.id);
     return { id: a.id, apartado_por: e.apartado_por, parecidos: e.parecidos, mio: mios[a.id] || null };
   });
-  return { ok: true, generado_en: (ahora || new Date()).toISOString(), articulos: lista };
+  return { ok: true, generado_en: ahora.toISOString(), articulos: lista };
 }
 
 // ------------------------------------------------------------------ decisiones de escritura
