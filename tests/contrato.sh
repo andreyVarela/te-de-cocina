@@ -10,6 +10,9 @@
 # Ojo con curl: se usa -L SIN -X POST. Apps Script responde 302 y la respuesta se lee con GET en
 # script.googleusercontent.com (igual que hace fetch). Con -X POST curl repetiría el POST y fallaría.
 set -euo pipefail
+# El bash 3.2 de macOS aplica brace expansion a los cuerpos JSON dentro de "$(post "{…,…}")" y
+# los parte por las comas: el servidor recibe pedazos. Sin brace expansion llegan enteros.
+set +B
 
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 API="${1:-$(node -e 'process.stdout.write(require(process.argv[1]).api_url || "")' "$RAIZ/evento.json")}"
