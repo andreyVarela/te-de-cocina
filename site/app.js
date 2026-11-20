@@ -428,17 +428,16 @@
       aviso.appendChild(cuerpo);
     }
 
-    var titulo = el('p', { class: 'panel-titulo', id: 'pt-' + a.id, text: (tipo === 'apartado' ? 'Apartar: ' : 'Llevo algo parecido a: ') + etiqueta(a) });
+    var titulo = el('p', { class: 'panel-titulo', id: 'pt-' + a.id, text: (tipo === 'apartado' ? 'Apartar: ' : 'Algo parecido a: ') + etiqueta(a) });
     var form = el('form', { class: 'panel', novalidate: true, 'aria-labelledby': 'pt-' + a.id }, [
       titulo,
       el('p', {
         class: 'panel-ayuda', text: tipo === 'apartado'
-          ? 'Solo tu nombre, nada más. Los demás verán solo tu primer nombre.'
-          : 'No reserva nada: es para que yo sepa. Los demás verán solo tu primer nombre.'
+          ? 'Los demás solo verán tu primer nombre.'
+          : 'Es solo para que yo sepa. Sigue libre para otros.'
       }),
       persistente ? null : el('p', { class: 'panel-privado' }, [el('span', { 'aria-hidden': 'true', text: '!' }),
-        'Este navegador no guarda datos (puede ser modo privado). Puedes ' + (tipo === 'apartado' ? 'apartar' : 'marcarlo') +
-        ' igual, pero para soltarlo después tendrás que avisarme por WhatsApp.']),
+        'Este navegador no guarda datos: para soltarlo después, avísame por WhatsApp.']),
       el('div', { class: 'campo' }, [
         el('label', { for: idCampo, text: 'Tu nombre' }),
         input,
@@ -462,7 +461,7 @@
       enviar.disabled = true; enviar.setAttribute('aria-busy', 'true');
       enviar.textContent = tipo === 'apartado' ? 'Apartando…' : 'Guardando…';
       input.readOnly = true;
-      avisar('espera', [(tipo === 'apartado' ? 'Apartando ' : 'Guardando ') + etiqueta(a) + '… Puede tardar unos segundos; no cierres la página.']);
+      avisar('espera', [(tipo === 'apartado' ? 'Apartando' : 'Guardando') + '… no cierres la página.']);
       cancelar.disabled = true;
 
       api.apartar(a.id, v.nombre, tipo === 'parecido').then(function (r) {
@@ -476,9 +475,9 @@
           api.guardar(CLAVE_NOMBRE, v.nombre);
           a.estado = { apartado_por: r.estado ? r.estado.apartado_por : null, parecidos: r.estado ? r.estado.parecidos || [] : [], mio: r.tipo || tipo };
           cerrarPanel(a, false);
-          var lineas = [tipo === 'apartado' ? 'Listo, apartaste: ' + etiqueta(a) + '.' : 'Listo: llevas algo parecido a ' + etiqueta(a) + '.'];
-          if (!persistente) lineas.push('Este navegador no guarda datos: si después no puedes llevarlo, avísame por WhatsApp y yo lo suelto.');
-          else if (r.primero_en_dispositivo) lineas.push('Si después no puedes, vuelve aquí desde este mismo celular y toca «Soltar».');
+          var lineas = [tipo === 'apartado' ? '¡Listo, es tuyo!' : '¡Listo, anotado!'];
+          if (!persistente) lineas.push('Si después no puedes, avísame por WhatsApp.');
+          else if (r.primero_en_dispositivo) lineas.push('Si cambias de idea, lo quitas aquí mismo desde este celular.');
           mensaje(a, 'exito', lineas, null, true);
           actualizarBarra();
           return;
@@ -494,7 +493,7 @@
             pintar(a);
             enviar.hidden = true;
             titulo.textContent = 'Ya lo apartó alguien';
-            avisar('conflicto', [por + ' acaba de apartar este. Puedes elegir otro o marcar «Llevo algo parecido».'], [
+            avisar('conflicto', [por + ' lo acaba de apartar. Elige otro o marca «Llevo algo parecido».'], [
               boton('Marcar «Llevo algo parecido»', 'boton-primario', null, function () { abrirPanel(a, 'parecido', input.value); })
             ]);
             aviso.focus();
@@ -540,7 +539,7 @@
     var aviso = el('div', { class: 'mensaje', role: 'status', tabindex: '-1' });
     var panel = el('div', { class: 'panel', role: 'group', 'aria-labelledby': 'ps-' + a.id }, [
       el('p', { class: 'panel-titulo', id: 'ps-' + a.id, text: esParecido ? '¿Quitar tu «parecido» en ' + etiqueta(a) + '?' : '¿Soltar ' + etiqueta(a) + '?' }),
-      el('p', { class: 'panel-ayuda', text: esParecido ? 'Ya no aparecerás como que llevas algo parecido.' : 'Quedará disponible para que otra persona lo aparte.' }),
+      el('p', { class: 'panel-ayuda', text: esParecido ? 'Se quita tu nombre de aquí.' : 'Queda libre para otra persona.' }),
       el('div', { class: 'panel-acciones' }, [si, no]),
       aviso
     ]);
@@ -554,7 +553,7 @@
       vaciar(aviso);
       aviso.setAttribute('data-tipo', 'espera');
       aviso.appendChild(simbolo('…'));
-      aviso.appendChild(el('div', { class: 'mensaje-cuerpo' }, [el('p', { text: 'Soltando ' + etiqueta(a) + '… Puede tardar unos segundos.' })]));
+      aviso.appendChild(el('div', { class: 'mensaje-cuerpo' }, [el('p', { text: 'Soltando…' })]));
       api.soltar(a.id).then(function (r) {
         a.ocupado = false;
         si.disabled = false; si.removeAttribute('aria-busy'); si.textContent = textoSi; no.disabled = false;
